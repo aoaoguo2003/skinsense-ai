@@ -40,6 +40,7 @@ export default function AnalyzePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [gpsLocating, setGpsLocating] = useState(false);
 
   const [form, setForm] = useState<FormState>(() => {
     if (typeof window !== "undefined") {
@@ -110,9 +111,28 @@ export default function AnalyzePage() {
 
   const detectGPS = () => {
     if (!navigator.geolocation) return;
+    setGpsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => update({ useGPS: true, latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      () => update({ useGPS: false })
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        update({ useGPS: true, latitude, longitude });
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { "Accept-Language": "zh-CN,zh;q=0.9" } }
+          );
+          const data = await res.json();
+          const city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.county ||
+            data.address?.state ||
+            "";
+          if (city) update({ city });
+        } catch {}
+        setGpsLocating(false);
+      },
+      () => { update({ useGPS: false }); setGpsLocating(false); }
     );
   };
 
@@ -431,21 +451,23 @@ export default function AnalyzePage() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={form.city}
+                    value={gpsLocating ? "定位中..." : form.city}
                     onChange={(e) => update({ city: e.target.value, useGPS: false })}
                     placeholder="例如：北京、Shanghai、London..."
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                    readOnly={gpsLocating}
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300 disabled:bg-gray-50"
                   />
                   <button
                     onClick={detectGPS}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                    disabled={gpsLocating}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
                       form.useGPS
                         ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
                         : "border-gray-200 text-gray-700 hover:border-rose-300"
                     }`}
                   >
                     <MapPin className="w-4 h-4" />
-                    {form.useGPS ? "已定位" : "自动定位"}
+                    {gpsLocating ? "定位中..." : form.useGPS ? "已定位" : "自动定位"}
                   </button>
                 </div>
               </div>
