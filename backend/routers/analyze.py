@@ -1,6 +1,8 @@
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from typing import Optional
 import json
+import os
+import httpx
 
 from services.llm_service import analyze_skin
 from services.weather_service import get_weather_by_city, get_weather_by_coords
@@ -54,3 +56,31 @@ async def analyze_endpoint(
     )
 
     return {"status": "ok", "weather": weather, "analysis": result}
+
+
+@router.get("/image")
+async def image_search(q: str):
+    api_key = os.getenv("GOOGLE_API_KEY", "")
+    cx = os.getenv("GOOGLE_CX", "")
+    if not api_key or not cx:
+        return {"image_url": None}
+    async with httpx.AsyncClient(timeout=5) as client:
+        try:
+            resp = await client.get(
+                "https://www.googleapis.com/customsearch/v1",
+                params={
+                    "key": api_key,
+                    "cx": cx,
+                    "q": q,
+                    "searchType": "image",
+                    "num": 1,
+                    "safe": "active",
+                    "imgType": "photo",
+                },
+            )
+            data = resp.json()
+            if "items" in data and data["items"]:
+                return {"image_url": data["items"][0]["link"]}
+        except Exception:
+            pass
+    return {"image_url": None}

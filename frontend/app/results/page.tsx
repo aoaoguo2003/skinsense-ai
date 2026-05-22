@@ -8,6 +8,7 @@ import {
   Sun, Moon, ArrowLeft, Leaf, DollarSign, ShoppingBag, Target
 } from "lucide-react";
 import { AnalyzeResponse, ProductRecommendation, IngredientConflict, ConcernSolution } from "@/lib/types";
+import { searchProductImage } from "@/lib/api";
 
 const SEVERITY_COLOR: Record<string, string> = {
   mild: "text-yellow-600 bg-yellow-50 border-yellow-200",
@@ -51,8 +52,33 @@ function ScoreRing({ score }: { score: number }) {
 
 function ProductCard({ product }: { product: ProductRecommendation }) {
   const [open, setOpen] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imgLoading, setImgLoading] = useState(true);
+
+  useEffect(() => {
+    searchProductImage(product.product_name, product.brand).then((url) => {
+      setImageUrl(url);
+      setImgLoading(false);
+    });
+  }, [product.product_name, product.brand]);
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {imgLoading ? (
+        <div className="h-44 bg-gray-100 animate-pulse" />
+      ) : imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl}
+          alt={product.product_name}
+          className="w-full h-44 object-cover"
+          onError={() => setImageUrl(null)}
+        />
+      ) : (
+        <div className="h-28 bg-gradient-to-br from-rose-50 to-fuchsia-50 flex items-center justify-center">
+          <ShoppingBag className="w-8 h-8 text-rose-200" />
+        </div>
+      )}
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">

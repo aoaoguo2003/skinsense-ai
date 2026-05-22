@@ -5,8 +5,8 @@ import { Sparkles, Camera, FlaskConical, CloudSun, ArrowRight } from "lucide-rea
 const features = [
   {
     icon: <Camera className="w-6 h-6" />,
-    title: "AI 肌肤分析",
-    desc: "上传自拍或填写问卷，AI 精准识别你的肤质、肤色和皮肤问题",
+    title: "智能肌肤分析",
+    desc: "上传自拍或填写问卷，精准识别你的肤质、肤色和皮肤问题",
   },
   {
     icon: <Sparkles className="w-6 h-6" />,
@@ -31,7 +31,7 @@ export default function HomePage() {
       <section className="flex flex-col items-center justify-center px-6 pt-24 pb-16 text-center">
         <div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur border border-rose-200 rounded-full px-4 py-1.5 text-sm text-rose-600 font-medium mb-8 shadow-sm">
           <Sparkles className="w-4 h-4" />
-          AI 驱动的专业美容顾问
+          你的专业美容顾问
         </div>
 
         <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight max-w-3xl">
@@ -42,7 +42,7 @@ export default function HomePage() {
         </h1>
 
         <p className="mt-6 text-lg text-gray-600 max-w-xl leading-relaxed">
-          上传一张自拍，填写简单问卷，AI 为你分析肤质、检测成分冲突，
+          上传一张自拍，填写简单问卷，为你分析肤质、检测成分冲突，
           并结合当地天气推荐最适合你的护肤与彩妆产品。
         </p>
 

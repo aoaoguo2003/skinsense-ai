@@ -1,6 +1,6 @@
 import { AnalyzeResponse, Questionnaire } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function analyzeSkin(params: {
   questionnaire: Questionnaire;
@@ -32,4 +32,16 @@ export async function analyzeSkin(params: {
   }
 
   return res.json();
+}
+
+export async function searchProductImage(productName: string, brand: string): Promise<string | null> {
+  const q = `${productName} ${brand} skincare product`;
+  try {
+    const res = await fetch(`${API_BASE}/api/image?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.image_url ?? null;
+  } catch {
+    return null;
+  }
 }
