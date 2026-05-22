@@ -41,26 +41,44 @@ export default function AnalyzePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [form, setForm] = useState<FormState>({
-    step: 1,
-    skinConcerns: [],
-    ageRange: "",
-    gender: "",
-    budgetMin: 0,
-    budgetMax: 500,
-    texture: "",
-    avoidIngredients: "",
-    fragrance: "",
-    currentProducts: [],
-    newProduct: "",
-    otherConcern: "",
-    city: "",
-    useGPS: false,
-    image: null,
-    imagePreview: null,
+  const [form, setForm] = useState<FormState>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("skinsense_form");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return { ...parsed, image: null, imagePreview: null };
+        }
+      } catch {}
+    }
+    return {
+      step: 1,
+      skinConcerns: [],
+      ageRange: "",
+      gender: "",
+      budgetMin: 0,
+      budgetMax: 500,
+      texture: "",
+      avoidIngredients: "",
+      fragrance: "",
+      currentProducts: [],
+      newProduct: "",
+      otherConcern: "",
+      city: "",
+      useGPS: false,
+      image: null,
+      imagePreview: null,
+    };
   });
 
-  const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
+  const update = (patch: Partial<FormState>) => setForm((f) => {
+    const next = { ...f, ...patch };
+    try {
+      const { image, imagePreview, ...saveable } = next;
+      sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
+    } catch {}
+    return next;
+  });
 
   const toggleConcern = (c: string) => {
     update({
@@ -132,6 +150,7 @@ export default function AnalyzePage() {
       });
 
       sessionStorage.setItem("skinsense_result", JSON.stringify(result));
+      sessionStorage.removeItem("skinsense_form");
       router.push("/results");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "分析失败，请重试");
