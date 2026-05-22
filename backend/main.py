@@ -22,6 +22,10 @@ app.add_middleware(
 app.include_router(analyze_router)
 
 
+@app.get("/")
+async def root():
+    return {"status": "ok"}
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
