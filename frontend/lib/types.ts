@@ -1,7 +1,5 @@
 export interface Questionnaire {
-  skin_type: string;
   skin_concerns: string[];
-  skin_sensitivity: string;
   age_range: string;
   gender: string;
   budget: string;

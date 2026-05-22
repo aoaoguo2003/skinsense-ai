@@ -6,7 +6,6 @@ import { Camera, Upload, X, MapPin, ChevronRight, ChevronLeft, Loader2 } from "l
 import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
 
-const SKIN_TYPES = ["油性", "干性", "混合性", "敏感性", "中性"];
 const SKIN_CONCERNS = ["痘痘/粉刺", "黑头", "毛孔粗大", "细纹/皱纹", "色斑/暗沉", "红血丝", "泛红敏感", "黑眼圈", "干燥脱皮", "出油过多"];
 const AGE_RANGES = ["18岁以下", "18-24岁", "25-34岁", "35-44岁", "45-54岁", "55岁以上"];
 const BUDGET_VALUES = [
@@ -15,13 +14,9 @@ const BUDGET_VALUES = [
 ];
 const TEXTURES = ["清爽水感", "轻薄乳液", "普通乳霜", "厚重滋润", "无偏好"];
 const FRAGRANCES = ["偏好有香味", "偏好无香", "无所谓"];
-const SENSITIVITY = ["非常敏感", "轻微敏感", "不敏感"];
-
 interface FormState {
   step: number;
-  skinType: string;
   skinConcerns: string[];
-  sensitivity: string;
   ageRange: string;
   gender: string;
   budgetMin: number;
@@ -48,9 +43,7 @@ export default function AnalyzePage() {
 
   const [form, setForm] = useState<FormState>({
     step: 1,
-    skinType: "",
     skinConcerns: [],
-    sensitivity: "",
     ageRange: "",
     gender: "",
     budgetMin: 0,
@@ -106,8 +99,8 @@ export default function AnalyzePage() {
   };
 
   const canNext = () => {
-    if (form.step === 1) return !!form.skinType && !!form.sensitivity;
-    if (form.step === 2) return form.skinConcerns.length > 0 && !!form.ageRange;
+    if (form.step === 1) return true;
+    if (form.step === 2) return form.skinConcerns.length > 0;
     return true;
   };
 
@@ -119,10 +112,8 @@ export default function AnalyzePage() {
         c === "其他" && form.otherConcern.trim() ? `其他：${form.otherConcern.trim()}` : c
       );
       const questionnaire: Questionnaire = {
-        skin_type: form.skinType,
         skin_concerns: skinConcerns,
-        skin_sensitivity: form.sensitivity,
-        age_range: form.ageRange,
+        age_range: form.ageRange || "未指定",
         gender: form.gender || "未指定",
         budget: `¥${form.budgetMin}-${form.budgetMax >= 10000 ? "10000以上" : form.budgetMax}（每件）`,
         preferred_texture: form.texture || "无偏好",
@@ -165,53 +156,28 @@ export default function AnalyzePage() {
             </div>
           ))}
           <span className="ml-auto text-sm text-gray-500">
-            {form.step === 1 ? "基本肤质" : form.step === 2 ? "皮肤关注" : "照片与位置"}
+            {form.step === 1 ? "基本信息" : form.step === 2 ? "皮肤关注" : "照片与位置"}
           </span>
         </div>
 
         <div className="bg-white/80 backdrop-blur rounded-3xl shadow-lg p-8">
 
-          {/* Step 1: Skin type + sensitivity */}
+          {/* Step 1: Basic info */}
           {form.step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">你的肤质是？</h2>
+              <h2 className="text-2xl font-bold text-gray-900">基本信息</h2>
+              <p className="text-sm text-gray-500 -mt-2">肤质与敏感度将由 AI 从照片自动识别</p>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">肤质类型</label>
-                <div className="flex flex-wrap gap-2">
-                  {SKIN_TYPES.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => update({ skinType: t })}
-                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-                        form.skinType === t
-                          ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
-                          : "border-gray-200 text-gray-700 hover:border-rose-300"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">皮肤敏感程度</label>
-                <div className="flex flex-wrap gap-2">
-                  {SENSITIVITY.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => update({ sensitivity: s })}
-                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-                        form.sensitivity === s
-                          ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
-                          : "border-gray-200 text-gray-700 hover:border-rose-300"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">年龄段</label>
+                <select
+                  value={form.ageRange}
+                  onChange={(e) => update({ ageRange: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                >
+                  <option value="">请选择（可选）</option>
+                  {AGE_RANGES.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
               </div>
 
               <div>
@@ -276,18 +242,6 @@ export default function AnalyzePage() {
                     className="mt-3 w-full border border-rose-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
                   />
                 )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">年龄段</label>
-                <select
-                  value={form.ageRange}
-                  onChange={(e) => update({ ageRange: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-                >
-                  <option value="">请选择</option>
-                  {AGE_RANGES.map((a) => <option key={a} value={a}>{a}</option>)}
-                </select>
               </div>
 
               <div>
@@ -469,7 +423,6 @@ export default function AnalyzePage() {
 
               {/* Summary */}
               <div className="bg-rose-50 rounded-2xl p-4 text-sm text-gray-600 space-y-1">
-                <p><span className="font-medium">肤质：</span>{form.skinType} · {form.sensitivity}</p>
                 <p><span className="font-medium">关注点：</span>{form.skinConcerns.join("、") || "—"}</p>
                 <p><span className="font-medium">预算：</span>¥{form.budgetMin} — {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}</p>
                 {form.currentProducts.length > 0 && (
