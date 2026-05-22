@@ -287,10 +287,20 @@ export default function AnalyzePage() {
                     style={{ zIndex: BUDGET_VALUES.indexOf(form.budgetMin) >= BUDGET_VALUES.length - 2 ? 3 : 5 }}
                   />
                 </div>
-                <div className="flex justify-between mt-3 px-1">
-                  {["¥0", "¥1000", "¥2000", "¥5000", "¥10000+"].map((label, i) => (
-                    <span key={i} className="text-xs text-gray-400">{label}</span>
-                  ))}
+                <div className="relative mt-3 px-1 h-5">
+                  {([0, 1000, 2000, 10000] as const).map((value) => {
+                    const idx = BUDGET_VALUES.indexOf(value);
+                    const pct = (idx / (BUDGET_VALUES.length - 1)) * 100;
+                    return (
+                      <span
+                        key={value}
+                        className="absolute text-xs text-gray-400 -translate-x-1/2"
+                        style={{ left: `${pct}%` }}
+                      >
+                        {value === 10000 ? "¥10000+" : `¥${value}`}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
 
