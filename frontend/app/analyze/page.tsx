@@ -2,15 +2,17 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Upload, X, MapPin, Plus, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Camera, Upload, X, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
 
 const SKIN_TYPES = ["油性", "干性", "混合性", "敏感性", "中性"];
 const SKIN_CONCERNS = ["痘痘/粉刺", "黑头", "毛孔粗大", "细纹/皱纹", "色斑/暗沉", "红血丝", "泛红敏感", "黑眼圈", "干燥脱皮", "出油过多"];
 const AGE_RANGES = ["18岁以下", "18-24岁", "25-34岁", "35-44岁", "45-54岁", "55岁以上"];
-const MAX_BUDGET = 2000;
-const BUDGET_STEP = 50;
+const BUDGET_VALUES = [
+  ...Array.from({ length: 41 }, (_, i) => i * 50),       // 0, 50, 100, ..., 2000
+  ...Array.from({ length: 8 }, (_, i) => 3000 + i * 1000), // 3000, 4000, ..., 10000
+];
 const TEXTURES = ["清爽水感", "轻薄乳液", "普通乳霜", "厚重滋润", "无偏好"];
 const FRAGRANCES = ["偏好有香味", "偏好无香", "无所谓"];
 const SENSITIVITY = ["非常敏感", "轻微敏感", "不敏感"];
@@ -122,7 +124,7 @@ export default function AnalyzePage() {
         skin_sensitivity: form.sensitivity,
         age_range: form.ageRange,
         gender: form.gender || "未指定",
-        budget: `¥${form.budgetMin}-${form.budgetMax >= MAX_BUDGET ? MAX_BUDGET + "以上" : form.budgetMax}（每件）`,
+        budget: `¥${form.budgetMin}-${form.budgetMax >= 10000 ? "10000以上" : form.budgetMax}（每件）`,
         preferred_texture: form.texture || "无偏好",
         avoid_ingredients: form.avoidIngredients || "无",
         fragrance_preference: form.fragrance || "无所谓",
@@ -294,7 +296,7 @@ export default function AnalyzePage() {
                   <span className="text-base font-semibold text-rose-500">¥{form.budgetMin}</span>
                   <span className="text-xs text-gray-400">—</span>
                   <span className="text-base font-semibold text-fuchsia-500">
-                    {form.budgetMax >= MAX_BUDGET ? `¥${MAX_BUDGET}+` : `¥${form.budgetMax}`}
+                    {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}
                   </span>
                 </div>
                 <div className="range-dual relative h-2 mx-2">
@@ -302,41 +304,39 @@ export default function AnalyzePage() {
                   <div
                     className="absolute h-full rounded-full bg-gradient-to-r from-rose-400 to-fuchsia-500"
                     style={{
-                      left: `${(form.budgetMin / MAX_BUDGET) * 100}%`,
-                      right: `${((MAX_BUDGET - form.budgetMax) / MAX_BUDGET) * 100}%`,
+                      left: `${(BUDGET_VALUES.indexOf(form.budgetMin) / (BUDGET_VALUES.length - 1)) * 100}%`,
+                      right: `${((BUDGET_VALUES.length - 1 - BUDGET_VALUES.indexOf(form.budgetMax)) / (BUDGET_VALUES.length - 1)) * 100}%`,
                     }}
                   />
                   <input
                     type="range"
                     min={0}
-                    max={MAX_BUDGET}
-                    step={BUDGET_STEP}
-                    value={form.budgetMin}
+                    max={BUDGET_VALUES.length - 1}
+                    step={1}
+                    value={BUDGET_VALUES.indexOf(form.budgetMin)}
                     onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (v < form.budgetMax - BUDGET_STEP) update({ budgetMin: v });
+                      const i = Number(e.target.value);
+                      if (i < BUDGET_VALUES.indexOf(form.budgetMax) - 1) update({ budgetMin: BUDGET_VALUES[i] });
                     }}
-                    style={{ zIndex: form.budgetMin >= MAX_BUDGET - BUDGET_STEP ? 5 : 3 }}
+                    style={{ zIndex: BUDGET_VALUES.indexOf(form.budgetMin) >= BUDGET_VALUES.length - 2 ? 5 : 3 }}
                   />
                   <input
                     type="range"
                     min={0}
-                    max={MAX_BUDGET}
-                    step={BUDGET_STEP}
-                    value={form.budgetMax}
+                    max={BUDGET_VALUES.length - 1}
+                    step={1}
+                    value={BUDGET_VALUES.indexOf(form.budgetMax)}
                     onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (v > form.budgetMin + BUDGET_STEP) update({ budgetMax: v });
+                      const i = Number(e.target.value);
+                      if (i > BUDGET_VALUES.indexOf(form.budgetMin) + 1) update({ budgetMax: BUDGET_VALUES[i] });
                     }}
-                    style={{ zIndex: form.budgetMin >= MAX_BUDGET - BUDGET_STEP ? 3 : 5 }}
+                    style={{ zIndex: BUDGET_VALUES.indexOf(form.budgetMin) >= BUDGET_VALUES.length - 2 ? 3 : 5 }}
                   />
                 </div>
                 <div className="flex justify-between mt-3 px-1">
-                  <span className="text-xs text-gray-400">¥0</span>
-                  <span className="text-xs text-gray-400">¥500</span>
-                  <span className="text-xs text-gray-400">¥1000</span>
-                  <span className="text-xs text-gray-400">¥1500</span>
-                  <span className="text-xs text-gray-400">¥2000+</span>
+                  {["¥0", "¥1000", "¥2000", "¥5000", "¥10000+"].map((label, i) => (
+                    <span key={i} className="text-xs text-gray-400">{label}</span>
+                  ))}
                 </div>
               </div>
 
@@ -384,12 +384,9 @@ export default function AnalyzePage() {
                     value={form.newProduct}
                     onChange={(e) => update({ newProduct: e.target.value })}
                     onKeyDown={(e) => e.key === "Enter" && addProduct()}
-                    placeholder="输入产品名称后按 Enter 或点击 +"
+                    placeholder="输入产品名称后按 Enter 添加"
                     className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
                   />
-                  <button onClick={addProduct} className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center hover:bg-rose-200 transition-colors">
-                    <Plus className="w-5 h-5" />
-                  </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {form.currentProducts.map((p) => (
@@ -474,7 +471,7 @@ export default function AnalyzePage() {
               <div className="bg-rose-50 rounded-2xl p-4 text-sm text-gray-600 space-y-1">
                 <p><span className="font-medium">肤质：</span>{form.skinType} · {form.sensitivity}</p>
                 <p><span className="font-medium">关注点：</span>{form.skinConcerns.join("、") || "—"}</p>
-                <p><span className="font-medium">预算：</span>¥{form.budgetMin} — {form.budgetMax >= MAX_BUDGET ? `¥${MAX_BUDGET}+` : `¥${form.budgetMax}`}</p>
+                <p><span className="font-medium">预算：</span>¥{form.budgetMin} — {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}</p>
                 {form.currentProducts.length > 0 && (
                   <p><span className="font-medium">当前产品：</span>{form.currentProducts.join("、")}</p>
                 )}
