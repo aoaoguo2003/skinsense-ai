@@ -9,7 +9,8 @@ import { Questionnaire } from "@/lib/types";
 const SKIN_TYPES = ["油性", "干性", "混合性", "敏感性", "中性"];
 const SKIN_CONCERNS = ["痘痘/粉刺", "黑头", "毛孔粗大", "细纹/皱纹", "色斑/暗沉", "红血丝", "泛红敏感", "黑眼圈", "干燥脱皮", "出油过多"];
 const AGE_RANGES = ["18岁以下", "18-24岁", "25-34岁", "35-44岁", "45-54岁", "55岁以上"];
-const BUDGETS = ["经济实惠（¥100以下/件）", "中档（¥100-300/件）", "高端（¥300-800/件）", "奢华（¥800以上/件）"];
+const MAX_BUDGET = 2000;
+const BUDGET_STEP = 50;
 const TEXTURES = ["清爽水感", "轻薄乳液", "普通乳霜", "厚重滋润", "无偏好"];
 const FRAGRANCES = ["偏好有香味", "偏好无香", "无所谓"];
 const SENSITIVITY = ["非常敏感", "轻微敏感", "不敏感"];
@@ -21,7 +22,8 @@ interface FormState {
   sensitivity: string;
   ageRange: string;
   gender: string;
-  budget: string;
+  budgetMin: number;
+  budgetMax: number;
   texture: string;
   avoidIngredients: string;
   fragrance: string;
@@ -49,7 +51,8 @@ export default function AnalyzePage() {
     sensitivity: "",
     ageRange: "",
     gender: "",
-    budget: BUDGETS[1],
+    budgetMin: 0,
+    budgetMax: 500,
     texture: "",
     avoidIngredients: "",
     fragrance: "",
@@ -102,7 +105,7 @@ export default function AnalyzePage() {
 
   const canNext = () => {
     if (form.step === 1) return !!form.skinType && !!form.sensitivity;
-    if (form.step === 2) return form.skinConcerns.length > 0 && !!form.ageRange && !!form.budget;
+    if (form.step === 2) return form.skinConcerns.length > 0 && !!form.ageRange;
     return true;
   };
 
@@ -119,7 +122,7 @@ export default function AnalyzePage() {
         skin_sensitivity: form.sensitivity,
         age_range: form.ageRange,
         gender: form.gender || "未指定",
-        budget: form.budget,
+        budget: `¥${form.budgetMin}-${form.budgetMax >= MAX_BUDGET ? MAX_BUDGET + "以上" : form.budgetMax}（每件）`,
         preferred_texture: form.texture || "无偏好",
         avoid_ingredients: form.avoidIngredients || "无",
         fragrance_preference: form.fragrance || "无所谓",
@@ -286,30 +289,54 @@ export default function AnalyzePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  预算范围
-                  <span className="ml-2 text-rose-500 font-semibold">{form.budget.split("（")[0]}</span>
-                </label>
-                <div className="px-1">
+                <label className="block text-sm font-medium text-gray-700 mb-3">预算范围（每件单品）</label>
+                <div className="flex justify-between items-center mb-4 px-1">
+                  <span className="text-base font-semibold text-rose-500">¥{form.budgetMin}</span>
+                  <span className="text-xs text-gray-400">—</span>
+                  <span className="text-base font-semibold text-fuchsia-500">
+                    {form.budgetMax >= MAX_BUDGET ? `¥${MAX_BUDGET}+` : `¥${form.budgetMax}`}
+                  </span>
+                </div>
+                <div className="range-dual relative h-2 mx-2">
+                  <div className="absolute inset-0 rounded-full bg-gray-100" />
+                  <div
+                    className="absolute h-full rounded-full bg-gradient-to-r from-rose-400 to-fuchsia-500"
+                    style={{
+                      left: `${(form.budgetMin / MAX_BUDGET) * 100}%`,
+                      right: `${((MAX_BUDGET - form.budgetMax) / MAX_BUDGET) * 100}%`,
+                    }}
+                  />
                   <input
                     type="range"
                     min={0}
-                    max={3}
-                    step={1}
-                    value={Math.max(0, BUDGETS.indexOf(form.budget))}
-                    onChange={(e) => update({ budget: BUDGETS[Number(e.target.value)] })}
-                    className="w-full h-2 rounded-full cursor-pointer accent-rose-500"
-                    style={{
-                      background: `linear-gradient(to right, #f43f5e ${Math.max(0, BUDGETS.indexOf(form.budget)) / 3 * 100}%, #f3f4f6 ${Math.max(0, BUDGETS.indexOf(form.budget)) / 3 * 100}%)`
+                    max={MAX_BUDGET}
+                    step={BUDGET_STEP}
+                    value={form.budgetMin}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (v < form.budgetMax - BUDGET_STEP) update({ budgetMin: v });
                     }}
+                    style={{ zIndex: form.budgetMin >= MAX_BUDGET - BUDGET_STEP ? 5 : 3 }}
                   />
-                  <div className="flex justify-between mt-2">
-                    {["¥100以下", "¥100-300", "¥300-800", "¥800+"].map((label, i) => (
-                      <span key={i} className={`text-xs ${BUDGETS.indexOf(form.budget) === i ? "text-rose-500 font-semibold" : "text-gray-400"}`}>
-                        {label}
-                      </span>
-                    ))}
-                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={MAX_BUDGET}
+                    step={BUDGET_STEP}
+                    value={form.budgetMax}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (v > form.budgetMin + BUDGET_STEP) update({ budgetMax: v });
+                    }}
+                    style={{ zIndex: form.budgetMin >= MAX_BUDGET - BUDGET_STEP ? 3 : 5 }}
+                  />
+                </div>
+                <div className="flex justify-between mt-3 px-1">
+                  <span className="text-xs text-gray-400">¥0</span>
+                  <span className="text-xs text-gray-400">¥500</span>
+                  <span className="text-xs text-gray-400">¥1000</span>
+                  <span className="text-xs text-gray-400">¥1500</span>
+                  <span className="text-xs text-gray-400">¥2000+</span>
                 </div>
               </div>
 
@@ -447,7 +474,7 @@ export default function AnalyzePage() {
               <div className="bg-rose-50 rounded-2xl p-4 text-sm text-gray-600 space-y-1">
                 <p><span className="font-medium">肤质：</span>{form.skinType} · {form.sensitivity}</p>
                 <p><span className="font-medium">关注点：</span>{form.skinConcerns.join("、") || "—"}</p>
-                <p><span className="font-medium">预算：</span>{form.budget}</p>
+                <p><span className="font-medium">预算：</span>¥{form.budgetMin} — {form.budgetMax >= MAX_BUDGET ? `¥${MAX_BUDGET}+` : `¥${form.budgetMax}`}</p>
                 {form.currentProducts.length > 0 && (
                   <p><span className="font-medium">当前产品：</span>{form.currentProducts.join("、")}</p>
                 )}
