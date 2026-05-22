@@ -5,4 +5,4 @@ if (-not (Test-Path ".env.local")) {
     Copy-Item ".env.local.example" ".env.local"
 }
 
-npm run dev
+npm run dev -- -H 0.0.0.0

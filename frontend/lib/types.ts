@@ -50,6 +50,14 @@ export interface IngredientSynergy {
   synergy: string;
 }
 
+export interface ConcernSolution {
+  concern: string;
+  analysis: string;
+  targeted_solution: string;
+  key_ingredients: string[];
+  weather_impact: string;
+}
+
 export interface AnalysisResult {
   skin_analysis: {
     skin_type: string;
@@ -62,6 +70,7 @@ export interface AnalysisResult {
     recommendation: string;
     key_considerations: string[];
   };
+  concern_solutions?: ConcernSolution[];
   product_recommendations: ProductRecommendation[];
   ingredient_conflicts: {
     current_product_issues: IngredientConflict[];

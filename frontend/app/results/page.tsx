@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Sparkles, CloudSun, FlaskConical, AlertTriangle, CheckCircle2,
-  Sun, Moon, ArrowLeft, Leaf, DollarSign, ShoppingBag
+  Sun, Moon, ArrowLeft, Leaf, DollarSign, ShoppingBag, Target
 } from "lucide-react";
-import { AnalyzeResponse, ProductRecommendation, IngredientConflict } from "@/lib/types";
+import { AnalyzeResponse, ProductRecommendation, IngredientConflict, ConcernSolution } from "@/lib/types";
 
 const SEVERITY_COLOR: Record<string, string> = {
   mild: "text-yellow-600 bg-yellow-50 border-yellow-200",
@@ -107,6 +107,47 @@ function ProductCard({ product }: { product: ProductRecommendation }) {
   );
 }
 
+function ConcernSolutionCard({ solution }: { solution: ConcernSolution }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 bg-gradient-to-br from-rose-100 to-fuchsia-100 rounded-xl flex items-center justify-center flex-shrink-0">
+          <Target className="w-4 h-4 text-rose-500" />
+        </div>
+        <h4 className="font-semibold text-gray-900">{solution.concern}</h4>
+      </div>
+      <div className="space-y-3">
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-xs font-semibold text-gray-500 mb-1">成因分析</p>
+          <p className="text-sm text-gray-600 leading-relaxed">{solution.analysis}</p>
+        </div>
+        <div className="bg-rose-50 rounded-xl p-3">
+          <p className="text-xs font-semibold text-rose-500 mb-1">针对方案</p>
+          <p className="text-sm text-gray-700 leading-relaxed">{solution.targeted_solution}</p>
+        </div>
+        {solution.key_ingredients.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 mb-2">关键成分</p>
+            <div className="flex flex-wrap gap-1.5">
+              {solution.key_ingredients.map((ing, i) => (
+                <span key={i} className="text-xs bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100 px-2.5 py-1 rounded-full font-medium">
+                  {ing}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {solution.weather_impact && (
+          <div className="flex items-start gap-2 bg-sky-50 rounded-xl p-3">
+            <CloudSun className="w-3.5 h-3.5 text-sky-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-sky-700 leading-relaxed">{solution.weather_impact}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ConflictCard({ conflict }: { conflict: IngredientConflict }) {
   return (
     <div className={`rounded-xl border p-4 ${SEVERITY_COLOR[conflict.severity]}`}>
@@ -141,7 +182,7 @@ export default function ResultsPage() {
   );
 
   const { analysis, weather } = data;
-  const { skin_analysis, weather_adjustment, product_recommendations, ingredient_conflicts, lifestyle_tips } = analysis;
+  const { skin_analysis, weather_adjustment, concern_solutions, product_recommendations, ingredient_conflicts, lifestyle_tips } = analysis;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 py-12 px-4">
@@ -185,6 +226,19 @@ export default function ResultsPage() {
             </div>
           </div>
         </div>
+
+        {/* Concern Solutions */}
+        {concern_solutions && concern_solutions.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="w-5 h-5 text-rose-500" />
+              <h2 className="text-xl font-bold text-gray-900">逐项肌肤解决方案</h2>
+            </div>
+            <div className="space-y-4">
+              {concern_solutions.map((s, i) => <ConcernSolutionCard key={i} solution={s} />)}
+            </div>
+          </div>
+        )}
 
         {/* Weather Adjustment */}
         {weather_adjustment && (

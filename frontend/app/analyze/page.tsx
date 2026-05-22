@@ -27,6 +27,7 @@ interface FormState {
   fragrance: string;
   currentProducts: string[];
   newProduct: string;
+  otherConcern: string;
   city: string;
   useGPS: boolean;
   latitude?: number;
@@ -48,12 +49,13 @@ export default function AnalyzePage() {
     sensitivity: "",
     ageRange: "",
     gender: "",
-    budget: "",
+    budget: BUDGETS[1],
     texture: "",
     avoidIngredients: "",
     fragrance: "",
     currentProducts: [],
     newProduct: "",
+    otherConcern: "",
     city: "",
     useGPS: false,
     image: null,
@@ -108,9 +110,12 @@ export default function AnalyzePage() {
     setLoading(true);
     setError("");
     try {
+      const skinConcerns = form.skinConcerns.map((c) =>
+        c === "其他" && form.otherConcern.trim() ? `其他：${form.otherConcern.trim()}` : c
+      );
       const questionnaire: Questionnaire = {
         skin_type: form.skinType,
-        skin_concerns: form.skinConcerns,
+        skin_concerns: skinConcerns,
         skin_sensitivity: form.sensitivity,
         age_range: form.ageRange,
         gender: form.gender || "未指定",
@@ -246,31 +251,65 @@ export default function AnalyzePage() {
                       {c}
                     </button>
                   ))}
+                  <button
+                    onClick={() => toggleConcern("其他")}
+                    className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${
+                      form.skinConcerns.includes("其他")
+                        ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
+                        : "border-gray-200 text-gray-700 hover:border-rose-300"
+                    }`}
+                  >
+                    其他
+                  </button>
                 </div>
+                {form.skinConcerns.includes("其他") && (
+                  <input
+                    type="text"
+                    value={form.otherConcern}
+                    onChange={(e) => update({ otherConcern: e.target.value })}
+                    placeholder="请描述你的皮肤问题..."
+                    className="mt-3 w-full border border-rose-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  />
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">年龄段</label>
-                  <select
-                    value={form.ageRange}
-                    onChange={(e) => update({ ageRange: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-                  >
-                    <option value="">请选择</option>
-                    {AGE_RANGES.map((a) => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">预算范围</label>
-                  <select
-                    value={form.budget}
-                    onChange={(e) => update({ budget: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-                  >
-                    <option value="">请选择</option>
-                    {BUDGETS.map((b) => <option key={b} value={b}>{b}</option>)}
-                  </select>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">年龄段</label>
+                <select
+                  value={form.ageRange}
+                  onChange={(e) => update({ ageRange: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                >
+                  <option value="">请选择</option>
+                  {AGE_RANGES.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  预算范围
+                  <span className="ml-2 text-rose-500 font-semibold">{form.budget.split("（")[0]}</span>
+                </label>
+                <div className="px-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={3}
+                    step={1}
+                    value={Math.max(0, BUDGETS.indexOf(form.budget))}
+                    onChange={(e) => update({ budget: BUDGETS[Number(e.target.value)] })}
+                    className="w-full h-2 rounded-full cursor-pointer accent-rose-500"
+                    style={{
+                      background: `linear-gradient(to right, #f43f5e ${Math.max(0, BUDGETS.indexOf(form.budget)) / 3 * 100}%, #f3f4f6 ${Math.max(0, BUDGETS.indexOf(form.budget)) / 3 * 100}%)`
+                    }}
+                  />
+                  <div className="flex justify-between mt-2">
+                    {["¥100以下", "¥100-300", "¥300-800", "¥800+"].map((label, i) => (
+                      <span key={i} className={`text-xs ${BUDGETS.indexOf(form.budget) === i ? "text-rose-500 font-semibold" : "text-gray-400"}`}>
+                        {label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
 

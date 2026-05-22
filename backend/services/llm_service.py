@@ -24,6 +24,8 @@ Your analysis must be:
 - Practical with real, commercially available products
 - Honest about ingredient interactions and potential conflicts
 
+IMPORTANT: Respond entirely in Simplified Chinese (简体中文). Every text field in the JSON must be written in Chinese.
+
 Always respond in valid JSON format as specified."""
 
 
@@ -66,9 +68,18 @@ Return ONLY valid JSON with this exact structure:
     "summary": "2-3 sentence analysis"
   },
   "weather_adjustment": {
-    "recommendation": "How weather/climate affects their skincare needs",
-    "key_considerations": ["list of weather-related tips"]
+    "recommendation": "详细说明当前天气/气候如何影响该用户的肌肤状态，需具体说明温度、湿度、紫外线的影响",
+    "key_considerations": ["至少4条具体的天气适配护肤建议"]
   },
+  "concern_solutions": [
+    {
+      "concern": "皮肤问题名称（与用户填写的保持一致）",
+      "analysis": "该问题的成因分析（2句话，结合用户肤质特点和当前天气环境）",
+      "targeted_solution": "针对此问题的具体护肤步骤和改善方案（2-3句话，提及可使用的成分或产品类型）",
+      "key_ingredients": ["对此问题最有效的核心成分1", "成分2", "成分3"],
+      "weather_impact": "当前气候条件对此问题的影响及针对性应对策略（1句话）"
+    }
+  ],
   "product_recommendations": [
     {
       "category": "e.g. Cleanser / Serum / Moisturizer / Sunscreen / Toner",
