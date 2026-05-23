@@ -1,4 +1,5 @@
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
 from typing import Optional
 import json
 import os
@@ -73,14 +74,41 @@ async def image_search(q: str):
                     "cx": cx,
                     "q": q,
                     "searchType": "image",
-                    "num": 1,
+                    "num": 3,
                     "safe": "active",
                     "imgType": "photo",
                 },
             )
             data = resp.json()
             if "items" in data and data["items"]:
-                return {"image_url": data["items"][0]["link"]}
+                # Try each result until one proxies successfully
+                for item in data["items"]:
+                    url = item["link"]
+                    try:
+                        img_resp = await client.get(
+                            url,
+                            headers={"Referer": "https://www.google.com/"},
+                            timeout=4,
+                            follow_redirects=True,
+                        )
+                        if img_resp.status_code == 200 and "image" in img_resp.headers.get("content-type", ""):
+                            return {"image_url": f"/api/image-proxy?url={httpx.URL(url)}", "direct_url": url}
+                    except Exception:
+                        continue
         except Exception:
             pass
     return {"image_url": None}
+
+
+@router.get("/image-proxy")
+async def image_proxy(url: str):
+    async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
+        try:
+            resp = await client.get(
+                url,
+                headers={"Referer": "https://www.google.com/", "User-Agent": "Mozilla/5.0"},
+            )
+            content_type = resp.headers.get("content-type", "image/jpeg")
+            return StreamingResponse(iter([resp.content]), media_type=content_type)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Image not available")
