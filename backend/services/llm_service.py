@@ -150,21 +150,35 @@ async def analyze_with_claude(
         })
     content.append({"type": "text", "text": prompt})
 
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=16000,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": content}],
-    )
+    last_err = None
+    for attempt in range(3):
+        response = await client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=8000,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": content}],
+        )
+        raw = response.content[0].text
 
-    raw = response.content[0].text
-    # Strip markdown code fences if present
-    if "```json" in raw:
-        raw = raw.split("```json")[1].split("```")[0].strip()
-    elif "```" in raw:
-        raw = raw.split("```")[1].split("```")[0].strip()
+        # Strip markdown code fences
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0].strip()
 
-    return json.loads(raw)
+        # Find outermost JSON object
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start != -1 and end != -1:
+            raw = raw[start : end + 1]
+
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as e:
+            last_err = e
+            continue
+
+    raise last_err
 
 
 async def analyze_with_openai(
