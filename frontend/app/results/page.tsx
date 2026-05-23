@@ -72,6 +72,7 @@ function ProductCard({ product }: { product: ProductRecommendation }) {
           src={imageUrl}
           alt={product.product_name}
           className="w-full h-44 object-cover"
+          referrerPolicy="no-referrer"
           onError={() => setImageUrl(null)}
         />
       ) : (
