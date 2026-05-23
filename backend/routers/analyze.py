@@ -1,4 +1,5 @@
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
 from typing import Optional
 import json
 import os
@@ -84,3 +85,21 @@ async def image_search(q: str):
         except Exception:
             pass
     return {"image_url": None}
+
+
+@router.get("/image-proxy")
+async def image_proxy(url: str):
+    async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
+        try:
+            resp = await client.get(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Referer": "https://www.google.com/",
+                    "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+                },
+            )
+            content_type = resp.headers.get("content-type", "image/jpeg")
+            return StreamingResponse(iter([resp.content]), media_type=content_type)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Image not available")

@@ -40,7 +40,8 @@ export async function searchProductImage(productName: string, brand: string): Pr
     const res = await fetch(`${API_BASE}/api/image?q=${encodeURIComponent(q)}`);
     if (!res.ok) return null;
     const data = await res.json();
-    return data.image_url ?? null;
+    if (!data.image_url) return null;
+    return `${API_BASE}/api/image-proxy?url=${encodeURIComponent(data.image_url)}`;
   } catch {
     return null;
   }
