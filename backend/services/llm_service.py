@@ -1,6 +1,7 @@
 import base64
 import json
 from typing import Optional
+from json_repair import repair_json
 from pydantic_settings import BaseSettings
 
 
@@ -174,9 +175,12 @@ async def analyze_with_claude(
 
         try:
             return json.loads(raw)
-        except json.JSONDecodeError as e:
-            last_err = e
-            continue
+        except json.JSONDecodeError:
+            try:
+                return json.loads(repair_json(raw))
+            except Exception as e:
+                last_err = e
+                continue
 
     raise last_err
 
