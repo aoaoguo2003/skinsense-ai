@@ -82,9 +82,11 @@ async def image_search(q: str):
             data = resp.json()
             if "items" in data and data["items"]:
                 return {"image_url": data["items"][0]["link"]}
-        except Exception:
-            pass
-    return {"image_url": None}
+            if "error" in data:
+                return {"image_url": None, "error": data["error"]}
+            return {"image_url": None, "error": "no results"}
+        except Exception as e:
+            return {"image_url": None, "error": str(e)}
 
 
 @router.get("/image-proxy")
