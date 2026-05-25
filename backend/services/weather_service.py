@@ -28,11 +28,9 @@ async def get_weather_by_city(city: str) -> Optional[dict]:
                 "city": data["name"],
                 "country": data["sys"]["country"],
                 "temp_c": round(data["main"]["temp"], 1),
-                "feels_like_c": round(data["main"]["feels_like"], 1),
                 "humidity": data["main"]["humidity"],
                 "description": data["weather"][0]["description"],
-                "wind_speed": data["wind"]["speed"],
-                "uv_index": None,  # Requires separate UV API call
+                "uv_index": None,
             }
         except Exception:
             return None
@@ -73,10 +71,8 @@ async def get_weather_by_coords(lat: float, lon: float) -> Optional[dict]:
                 "city": data["name"],
                 "country": data["sys"]["country"],
                 "temp_c": round(data["main"]["temp"], 1),
-                "feels_like_c": round(data["main"]["feels_like"], 1),
                 "humidity": data["main"]["humidity"],
                 "description": data["weather"][0]["description"],
-                "wind_speed": data["wind"]["speed"],
                 "uv_index": uv_index,
             }
         except Exception:
