@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Upload, X, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { analyzeSkin } from "@/lib/api";
