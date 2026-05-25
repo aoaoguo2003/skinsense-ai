@@ -34,15 +34,18 @@ export async function analyzeSkin(params: {
   return res.json();
 }
 
-export async function searchProductImage(productName: string, brand: string): Promise<string | null> {
+export async function searchProductImage(productName: string, brand: string): Promise<string[]> {
   const q = `${productName} ${brand} skincare product`;
   try {
     const res = await fetch(`${API_BASE}/api/image?q=${encodeURIComponent(q)}`);
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
-    if (!data.image_url) return null;
-    return `${API_BASE}/api/image-proxy?url=${encodeURIComponent(data.image_url)}`;
+    const toProxy = (url: string) => `${API_BASE}/api/image-proxy?url=${encodeURIComponent(url)}`;
+    const urls: string[] = [];
+    if (data.image_url) urls.push(toProxy(data.image_url));
+    for (const fb of (data.fallbacks ?? [])) urls.push(toProxy(fb));
+    return urls;
   } catch {
-    return null;
+    return [];
   }
 }

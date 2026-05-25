@@ -52,31 +52,34 @@ function ScoreRing({ score }: { score: number }) {
 
 function ProductCard({ product }: { product: ProductRecommendation }) {
   const [open, setOpen] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageIndex, setImageIndex] = useState(0);
   const [imgLoading, setImgLoading] = useState(true);
 
   useEffect(() => {
-    searchProductImage(product.product_name, product.brand).then((url) => {
-      setImageUrl(url);
+    searchProductImage(product.product_name, product.brand).then((urls) => {
+      setImageUrls(urls);
       setImgLoading(false);
     });
   }, [product.product_name, product.brand]);
+
+  const currentUrl = imageUrls[imageIndex] ?? null;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       {imgLoading ? (
         <div className="h-44 bg-gray-100 animate-pulse" />
-      ) : imageUrl ? (
+      ) : currentUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={imageUrl}
+          src={currentUrl}
           alt={product.product_name}
           className="w-full h-44 object-contain bg-white p-3"
           referrerPolicy="no-referrer"
-          onError={() => setImageUrl(null)}
+          onError={() => setImageIndex((i) => i + 1)}
         />
       ) : (
-        <div className="h-28 bg-gradient-to-br from-rose-50 to-fuchsia-50 flex items-center justify-center">
+        <div className="h-44 bg-gradient-to-br from-rose-50 to-fuchsia-50 flex items-center justify-center">
           <ShoppingBag className="w-8 h-8 text-rose-200" />
         </div>
       )}

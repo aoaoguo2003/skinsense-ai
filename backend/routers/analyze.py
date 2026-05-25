@@ -69,12 +69,15 @@ async def image_search(q: str):
             resp = await client.post(
                 "https://google.serper.dev/images",
                 headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
-                json={"q": q, "num": 1},
+                json={"q": q, "num": 3},
             )
             data = resp.json()
             images = data.get("images", [])
             if images:
-                return {"image_url": images[0]["imageUrl"]}
+                return {
+                    "image_url": images[0]["imageUrl"],
+                    "fallbacks": [img["imageUrl"] for img in images[1:]],
+                }
             return {"image_url": None, "error": "no results"}
         except Exception as e:
             return {"image_url": None, "error": str(e)}
