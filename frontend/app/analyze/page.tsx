@@ -142,7 +142,7 @@ export default function AnalyzePage() {
     const start = Date.now();
     const timer = setInterval(() => {
       const elapsed = (Date.now() - start) / 1000;
-      setProgress(Math.min(90, Math.round(90 * (1 - Math.exp(-elapsed / 28)))));
+      setProgress(Math.min(90, Math.round(90 * (1 - Math.exp(-elapsed / 90)))));
     }, 300);
     return () => clearInterval(timer);
   }, [loading]);
@@ -538,7 +538,7 @@ export default function AnalyzePage() {
                   )}
                 </button>
                 {!loading && (
-                  <p className="text-xs text-gray-400">约需 30–60 秒</p>
+                  <p className="text-xs text-gray-400">约需 2–3 分钟</p>
                 )}
               </div>
             )}
