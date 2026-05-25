@@ -61,29 +61,20 @@ async def analyze_endpoint(
 
 @router.get("/image")
 async def image_search(q: str):
-    api_key = os.getenv("GOOGLE_API_KEY", "")
-    cx = os.getenv("GOOGLE_CX", "")
-    if not api_key or not cx:
+    api_key = os.getenv("SERPER_API_KEY", "")
+    if not api_key:
         return {"image_url": None}
     async with httpx.AsyncClient(timeout=5) as client:
         try:
-            resp = await client.get(
-                "https://www.googleapis.com/customsearch/v1",
-                params={
-                    "key": api_key,
-                    "cx": cx,
-                    "q": q,
-                    "searchType": "image",
-                    "num": 1,
-                    "safe": "active",
-                    "imgType": "photo",
-                },
+            resp = await client.post(
+                "https://google.serper.dev/images",
+                headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+                json={"q": q, "num": 1},
             )
             data = resp.json()
-            if "items" in data and data["items"]:
-                return {"image_url": data["items"][0]["link"]}
-            if "error" in data:
-                return {"image_url": None, "error": data["error"]}
+            images = data.get("images", [])
+            if images:
+                return {"image_url": images[0]["imageUrl"]}
             return {"image_url": None, "error": "no results"}
         except Exception as e:
             return {"image_url": None, "error": str(e)}
