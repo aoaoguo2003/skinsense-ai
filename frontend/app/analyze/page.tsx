@@ -39,6 +39,7 @@ export default function AnalyzePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [gpsLocating, setGpsLocating] = useState(false);
 
@@ -136,6 +137,22 @@ export default function AnalyzePage() {
     );
   };
 
+  useEffect(() => {
+    if (!loading) { setProgress(0); return; }
+    const start = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      setProgress(Math.min(90, Math.round(90 * (1 - Math.exp(-elapsed / 28)))));
+    }, 300);
+    return () => clearInterval(timer);
+  }, [loading]);
+
+  const progressLabel =
+    progress < 25 ? "正在分析肤质特征..." :
+    progress < 55 ? "正在制定护肤方案..." :
+    progress < 80 ? "正在筛选产品推荐..." :
+    "即将完成...";
+
   const canNext = () => {
     if (form.step === 1) return true;
     if (form.step === 2) return form.skinConcerns.length > 0;
@@ -169,6 +186,7 @@ export default function AnalyzePage() {
         image: form.image,
       });
 
+      setProgress(100);
       sessionStorage.setItem("skinsense_result", JSON.stringify(result));
       sessionStorage.removeItem("skinsense_form");
       router.push("/results");
@@ -507,19 +525,40 @@ export default function AnalyzePage() {
                 下一步 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="flex items-center gap-2 px-8 py-2.5 bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
-              >
-                {loading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> AI 分析中...</>
-                ) : (
-                  <><Camera className="w-4 h-4" /> 开始分析</>
+              <div className="flex flex-col items-end gap-3">
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-8 py-2.5 bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
+                >
+                  {loading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> AI 分析中...</>
+                  ) : (
+                    <><Camera className="w-4 h-4" /> 开始分析</>
+                  )}
+                </button>
+                {!loading && (
+                  <p className="text-xs text-gray-400">约需 30–60 秒</p>
                 )}
-              </button>
+              </div>
             )}
           </div>
+
+          {/* Progress bar */}
+          {loading && (
+            <div className="mt-5">
+              <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                <span>{progressLabel}</span>
+                <span className="font-medium text-rose-500">{progress}%</span>
+              </div>
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-rose-400 to-fuchsia-500 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </main>
