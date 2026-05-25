@@ -71,7 +71,7 @@ function ProductCard({ product }: { product: ProductRecommendation }) {
         <img
           src={imageUrl}
           alt={product.product_name}
-          className="w-full h-44 object-cover"
+          className="w-full h-44 object-contain bg-white p-3"
           referrerPolicy="no-referrer"
           onError={() => setImageUrl(null)}
         />
