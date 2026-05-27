@@ -34,7 +34,7 @@ def _build_analysis_prompt(
     questionnaire: dict,
     weather: Optional[dict],
     current_products: Optional[list[str]],
-    has_image: bool,
+    image_count: int,
 ) -> str:
     parts = []
 
@@ -52,7 +52,9 @@ def _build_analysis_prompt(
     if current_products:
         parts.append("\n## User's Current Products\n" + "\n".join(f"- {p}" for p in current_products))
 
-    if has_image:
+    if image_count > 1:
+        parts.append(f"\n## Note\n{image_count} facial scan frames have been provided from the same session. Compare them together and base your visible-skin observations on consistent signals across frames, not one-off lighting artifacts.")
+    elif image_count == 1:
         parts.append("\n## Note\nA facial photo has been provided. Analyze the visible skin condition, tone, texture, and any visible concerns from the image.")
 
     parts.append("""
@@ -133,20 +135,24 @@ async def analyze_with_claude(
     current_products: Optional[list[str]],
     image_bytes: Optional[bytes],
     image_media_type: Optional[str],
+    image_payloads: Optional[list[tuple[bytes, str]]] = None,
 ) -> dict:
     import anthropic
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    prompt = _build_analysis_prompt(questionnaire, weather, current_products, image_bytes is not None)
+    image_payloads = image_payloads or (
+        [(image_bytes, image_media_type or "image/jpeg")] if image_bytes else []
+    )
+    prompt = _build_analysis_prompt(questionnaire, weather, current_products, len(image_payloads))
 
     content = []
-    if image_bytes:
+    for payload_bytes, payload_media_type in image_payloads[:3]:
         content.append({
             "type": "image",
             "source": {
                 "type": "base64",
-                "media_type": image_media_type or "image/jpeg",
-                "data": base64.standard_b64encode(image_bytes).decode("utf-8"),
+                "media_type": payload_media_type or "image/jpeg",
+                "data": base64.standard_b64encode(payload_bytes).decode("utf-8"),
             },
         })
     content.append({"type": "text", "text": prompt})
@@ -191,16 +197,20 @@ async def analyze_with_openai(
     current_products: Optional[list[str]],
     image_bytes: Optional[bytes],
     image_media_type: Optional[str],
+    image_payloads: Optional[list[tuple[bytes, str]]] = None,
 ) -> dict:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=settings.openai_api_key)
 
-    prompt = _build_analysis_prompt(questionnaire, weather, current_products, image_bytes is not None)
+    image_payloads = image_payloads or (
+        [(image_bytes, image_media_type or "image/jpeg")] if image_bytes else []
+    )
+    prompt = _build_analysis_prompt(questionnaire, weather, current_products, len(image_payloads))
 
     content = []
-    if image_bytes:
-        b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-        mime = image_media_type or "image/jpeg"
+    for payload_bytes, payload_media_type in image_payloads[:3]:
+        b64 = base64.standard_b64encode(payload_bytes).decode("utf-8")
+        mime = payload_media_type or "image/jpeg"
         content.append({
             "type": "image_url",
             "image_url": {"url": f"data:{mime};base64,{b64}", "detail": "high"},
@@ -226,7 +236,8 @@ async def analyze_skin(
     current_products: Optional[list[str]] = None,
     image_bytes: Optional[bytes] = None,
     image_media_type: Optional[str] = None,
+    image_payloads: Optional[list[tuple[bytes, str]]] = None,
 ) -> dict:
     if settings.llm_provider == "openai":
-        return await analyze_with_openai(questionnaire, weather, current_products, image_bytes, image_media_type)
-    return await analyze_with_claude(questionnaire, weather, current_products, image_bytes, image_media_type)
+        return await analyze_with_openai(questionnaire, weather, current_products, image_bytes, image_media_type, image_payloads)
+    return await analyze_with_claude(questionnaire, weather, current_products, image_bytes, image_media_type, image_payloads)

@@ -9,6 +9,7 @@ export async function analyzeSkin(params: {
   latitude?: number;
   longitude?: number;
   image?: File | null;
+  images?: File[];
 }): Promise<AnalyzeResponse> {
   const form = new FormData();
   form.append("questionnaire", JSON.stringify(params.questionnaire));
@@ -19,7 +20,11 @@ export async function analyzeSkin(params: {
   if (params.city) form.append("city", params.city);
   if (params.latitude != null) form.append("latitude", String(params.latitude));
   if (params.longitude != null) form.append("longitude", String(params.longitude));
-  if (params.image) form.append("image", params.image);
+  if (params.images?.length) {
+    params.images.slice(0, 3).forEach((file) => form.append("images", file));
+  } else if (params.image) {
+    form.append("image", params.image);
+  }
 
   const res = await fetch(`${API_BASE}/api/analyze`, {
     method: "POST",

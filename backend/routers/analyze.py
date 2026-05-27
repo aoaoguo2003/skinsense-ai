@@ -19,6 +19,7 @@ async def analyze_endpoint(
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
     image: Optional[UploadFile] = File(None),
+    images: Optional[list[UploadFile]] = File(None),
 ):
     try:
         q_data = json.loads(questionnaire)
@@ -39,14 +40,31 @@ async def analyze_endpoint(
     elif city:
         weather = await get_weather_by_city(city)
 
-    # Read image bytes
-    image_bytes = None
-    image_media_type = None
-    if image and image.filename:
-        image_bytes = await image.read()
-        image_media_type = image.content_type or "image/jpeg"
+    # Read image bytes. Keep the legacy single-image field, but prefer the
+    # scanner's multi-image payload when it is provided.
+    image_payloads = []
+    upload_images = images or []
+    if not upload_images and image and image.filename:
+        upload_images = [image]
+
+    if len(upload_images) > 3:
+        upload_images = upload_images[:3]
+
+    total_image_bytes = 0
+    for upload in upload_images:
+        if not upload.filename:
+            continue
+        image_bytes = await upload.read()
+        total_image_bytes += len(image_bytes)
         if len(image_bytes) > 10 * 1024 * 1024:
-            raise HTTPException(status_code=413, detail="Image too large (max 10MB)")
+            raise HTTPException(status_code=413, detail="Image too large (max 10MB each)")
+        if total_image_bytes > 20 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Images too large (max 20MB total)")
+        image_payloads.append((image_bytes, upload.content_type or "image/jpeg"))
+
+    # Backward compatibility for the service while the app migrates to multi-image scans.
+    image_bytes = image_payloads[0][0] if image_payloads else None
+    image_media_type = image_payloads[0][1] if image_payloads else None
 
     result = await analyze_skin(
         questionnaire=q_data,
@@ -54,6 +72,7 @@ async def analyze_endpoint(
         current_products=products_list,
         image_bytes=image_bytes,
         image_media_type=image_media_type,
+        image_payloads=image_payloads,
     )
 
     return {"status": "ok", "weather": weather, "analysis": result}

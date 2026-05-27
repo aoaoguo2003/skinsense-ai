@@ -33,15 +33,28 @@ interface FormState {
   longitude?: number;
   image: File | null;
   imagePreview: string | null;
+  scanImages: File[];
+  scanPreviews: string[];
+}
+
+interface ScanCapture {
+  file: File;
+  preview: string;
+  score: number;
 }
 
 export default function AnalyzePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [gpsLocating, setGpsLocating] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   const [form, setForm] = useState<FormState>(() => {
     if (typeof window !== "undefined") {
@@ -49,7 +62,7 @@ export default function AnalyzePage() {
         const saved = sessionStorage.getItem("skinsense_form");
         if (saved) {
           const parsed = JSON.parse(saved);
-          return { ...parsed, image: null, imagePreview: null };
+          return { ...parsed, image: null, imagePreview: null, scanImages: [], scanPreviews: [] };
         }
       } catch {}
     }
@@ -70,17 +83,23 @@ export default function AnalyzePage() {
       useGPS: false,
       image: null,
       imagePreview: null,
+      scanImages: [],
+      scanPreviews: [],
     };
   });
 
-  const update = (patch: Partial<FormState>) => setForm((f) => {
+  const update = useCallback((patch: Partial<FormState>) => setForm((f) => {
     const next = { ...f, ...patch };
     try {
-      const { image, imagePreview, ...saveable } = next;
+      const { image, imagePreview, scanImages, scanPreviews, ...saveable } = next;
+      void image;
+      void imagePreview;
+      void scanImages;
+      void scanPreviews;
       sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
     } catch {}
     return next;
-  });
+  }), []);
 
   const toggleConcern = (c: string) => {
     update({
@@ -99,16 +118,134 @@ export default function AnalyzePage() {
 
   const removeProduct = (p: string) => update({ currentProducts: form.currentProducts.filter((x) => x !== p) });
 
-  const handleImage = (file: File) => {
+  const handleImage = useCallback((file: File) => {
     const url = URL.createObjectURL(file);
-    update({ image: file, imagePreview: url });
+    form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
+    update({ image: file, imagePreview: url, scanImages: [], scanPreviews: [] });
+  }, [form.scanPreviews, update]);
+
+  const scoreFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const { data } = ctx.getImageData(0, 0, width, height);
+    let brightness = 0;
+    let contrast = 0;
+    let previous = 0;
+
+    for (let i = 0; i < data.length; i += 16) {
+      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      brightness += gray;
+      contrast += Math.abs(gray - previous);
+      previous = gray;
+    }
+
+    const samples = data.length / 16;
+    const avgBrightness = brightness / samples;
+    const brightnessScore = 1 - Math.min(Math.abs(avgBrightness - 145) / 145, 1);
+    const contrastScore = Math.min(contrast / samples / 28, 1);
+
+    return brightnessScore * 0.65 + contrastScore * 0.35;
+  };
+
+  const captureFrame = async (): Promise<ScanCapture | null> => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.readyState < 2) return null;
+
+    const width = 640;
+    const height = Math.round((video.videoHeight / video.videoWidth) * width) || 480;
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.drawImage(video, 0, 0, width, height);
+    const score = scoreFrame(ctx, width, height);
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        const file = new File([blob], `face-scan-${Date.now()}.jpg`, { type: "image/jpeg" });
+        resolve({ file, preview: URL.createObjectURL(blob), score });
+      }, "image/jpeg", 0.9);
+    });
+  };
+
+  const stopCamera = useCallback(() => {
+    setCameraStream((stream) => {
+      stream?.getTracks().forEach((track) => track.stop());
+      return null;
+    });
+    setScanning(false);
+  }, []);
+
+  const startFaceScan = async () => {
+    if (loading || scanning) return;
+    setError("");
+    setScanProgress(0);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      setCameraStream(stream);
+      setScanning(true);
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+      }
+
+      const captures: ScanCapture[] = [];
+      const totalFrames = 12;
+      for (let i = 0; i < totalFrames; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, i === 0 ? 500 : 220));
+        const capture = await captureFrame();
+        if (capture) captures.push(capture);
+        setScanProgress(Math.round(((i + 1) / totalFrames) * 100));
+      }
+
+      const best = captures
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+
+      captures
+        .filter((capture) => !best.includes(capture))
+        .forEach((capture) => URL.revokeObjectURL(capture.preview));
+
+      if (best.length === 0) {
+        throw new Error("未能采集到清晰画面，请重试或改用上传照片");
+      }
+
+      if (form.imagePreview) URL.revokeObjectURL(form.imagePreview);
+      form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
+      update({
+        image: null,
+        imagePreview: null,
+        scanImages: best.map((capture) => capture.file),
+        scanPreviews: best.map((capture) => capture.preview),
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限或改用上传照片");
+    } finally {
+      stopCamera();
+      setScanProgress(0);
+    }
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) handleImage(file);
-  }, []);
+  }, [handleImage]);
 
   const detectGPS = () => {
     if (!navigator.geolocation) return;
@@ -138,7 +275,7 @@ export default function AnalyzePage() {
   };
 
   useEffect(() => {
-    if (!loading) { setProgress(0); return; }
+    if (!loading) return;
     const start = Date.now();
     const timer = setInterval(() => {
       const elapsed = (Date.now() - start) / 1000;
@@ -146,6 +283,12 @@ export default function AnalyzePage() {
     }, 300);
     return () => clearInterval(timer);
   }, [loading]);
+
+  useEffect(() => {
+    return () => {
+      cameraStream?.getTracks().forEach((track) => track.stop());
+    };
+  }, [cameraStream]);
 
   const progressLabel =
     progress < 25 ? "正在分析肤质特征..." :
@@ -160,6 +303,7 @@ export default function AnalyzePage() {
   };
 
   const handleSubmit = async () => {
+    setProgress(0);
     setLoading(true);
     setError("");
     try {
@@ -184,6 +328,7 @@ export default function AnalyzePage() {
         latitude: form.useGPS ? form.latitude : undefined,
         longitude: form.useGPS ? form.longitude : undefined,
         image: form.image,
+        images: form.scanImages,
       });
 
       setProgress(100);
@@ -425,6 +570,91 @@ export default function AnalyzePage() {
           {form.step === 3 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900">照片与位置（可选）</h2>
+
+              {/* Face scan */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">实时扫脸采集（推荐）</label>
+                <div className="rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
+                  <div className="relative overflow-hidden rounded-xl bg-gray-900 aspect-video flex items-center justify-center">
+                    <video
+                      ref={videoRef}
+                      className={`h-full w-full object-cover scale-x-[-1] ${scanning ? "block" : "hidden"}`}
+                      muted
+                      playsInline
+                    />
+                    {!scanning && (
+                      <div className="text-center px-6">
+                        <Camera className="w-9 h-9 text-rose-300 mx-auto mb-3" />
+                        <p className="text-sm text-white font-medium">自动采集多张脸部画面</p>
+                        <p className="text-xs text-gray-300 mt-1">系统会挑选光线和清晰度最合适的 3 张用于综合分析</p>
+                      </div>
+                    )}
+                    {scanning && (
+                      <div className="absolute inset-x-6 bottom-5">
+                        <div className="flex justify-between text-xs text-white mb-1.5">
+                          <span>正在扫描，请正对镜头并保持光线稳定</span>
+                          <span>{scanProgress}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-white/20 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-rose-300 to-fuchsia-300 transition-all"
+                            style={{ width: `${scanProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <canvas ref={canvasRef} className="hidden" />
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={startFaceScan}
+                      disabled={loading || scanning}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white text-sm font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
+                    >
+                      {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                      {scanning ? "扫描中..." : "开始扫脸"}
+                    </button>
+                    {cameraStream && (
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-rose-300"
+                      >
+                        <X className="w-4 h-4" />
+                        停止
+                      </button>
+                    )}
+                  </div>
+
+                  {form.scanPreviews.length > 0 && (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-medium text-gray-500">已选出 {form.scanPreviews.length} 张最佳画面</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
+                            update({ scanImages: [], scanPreviews: [] });
+                          }}
+                          className="text-xs text-rose-500 hover:text-rose-600"
+                        >
+                          清除
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {form.scanPreviews.map((preview, i) => (
+                          <div key={preview} className="relative aspect-square overflow-hidden rounded-xl bg-white">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={preview} alt={`scan frame ${i + 1}`} className="h-full w-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Image upload */}
               <div>

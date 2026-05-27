@@ -197,13 +197,20 @@ function ConflictCard({ conflict }: { conflict: IngredientConflict }) {
 
 export default function ResultsPage() {
   const router = useRouter();
-  const [data, setData] = useState<AnalyzeResponse | null>(null);
+  const [data] = useState<AnalyzeResponse | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = sessionStorage.getItem("skinsense_result");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("skinsense_result");
-    if (!raw) { router.replace("/analyze"); return; }
-    try { setData(JSON.parse(raw)); } catch { router.replace("/analyze"); }
-  }, [router]);
+    if (!data) router.replace("/analyze");
+  }, [data, router]);
 
   if (!data) return (
     <div className="min-h-screen flex items-center justify-center bg-rose-50">
