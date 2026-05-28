@@ -42,7 +42,7 @@ export default function HomePage() {
         </h1>
 
         <p className="mt-6 text-lg text-gray-600 max-w-xl leading-relaxed">
-          上传一张自拍，填写简单问卷，为你分析肤质、检测成分冲突，
+          用摄像头扫描面部，告诉我们你的产品偏好，AI 即刻分析肤质、检测成分冲突，
           并结合当地天气推荐最适合你的护肤与彩妆产品。
         </p>
 
@@ -50,11 +50,9 @@ export default function HomePage() {
           href="/analyze"
           className="mt-10 inline-flex items-center gap-2 bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
         >
-          开始免费检测
+          开始检测
           <ArrowRight className="w-5 h-5" />
         </Link>
-
-        <p className="mt-4 text-sm text-gray-400">无需注册 · 结果即时生成 · 完全免费</p>
       </section>
 
       <section className="max-w-5xl mx-auto px-6 pb-24 grid grid-cols-1 md:grid-cols-2 gap-6">
