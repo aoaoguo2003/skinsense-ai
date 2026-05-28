@@ -222,7 +222,7 @@ export default function ResultsPage() {
   const { skin_analysis, weather_adjustment, concern_solutions, product_recommendations, ingredient_conflicts, lifestyle_tips } = analysis;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 py-12 px-4">
+    <main className="min-h-screen bg-white py-12 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
 
         {/* Header */}
