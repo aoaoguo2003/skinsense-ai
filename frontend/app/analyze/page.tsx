@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Camera, MapPin, ChevronRight, ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { analyzeSkin } from "@/lib/api";
@@ -82,6 +83,26 @@ export default function AnalyzePage() {
     } catch {}
     return next;
   }), []);
+
+  const advanceToPreferences = useCallback((captures: ScanCapture[]) => {
+    const scanImages = captures.map((capture) => capture.file);
+    const scanPreviews = captures.map((capture) => capture.preview);
+
+    flushSync(() => {
+      setForm((f) => {
+        const next = { ...f, step: 2, scanImages, scanPreviews };
+        try {
+          const { scanImages: _scanImages, scanPreviews: _scanPreviews, ...saveable } = next;
+          void _scanImages;
+          void _scanPreviews;
+          sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
+        } catch {}
+        return next;
+      });
+      setScanCompleted(true);
+      setScanning(false);
+    });
+  }, []);
 
   const scoreFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const { data } = ctx.getImageData(0, 0, width, height);
@@ -249,12 +270,7 @@ export default function AnalyzePage() {
       setScanInstruction("采集完成 ✓");
       setScanProgress(100);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
-      update({
-        step: 2,
-        scanImages: best.map((capture) => capture.file),
-        scanPreviews: best.map((capture) => capture.preview),
-      });
-      setScanCompleted(true);
+      advanceToPreferences(best);
       scanSucceeded = true;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限后重试");
