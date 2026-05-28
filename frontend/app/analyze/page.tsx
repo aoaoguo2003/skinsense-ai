@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Upload, X, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Camera, X, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
 
@@ -28,8 +28,6 @@ interface FormState {
   useGPS: boolean;
   latitude?: number;
   longitude?: number;
-  image: File | null;
-  imagePreview: string | null;
   scanImages: File[];
   scanPreviews: string[];
 }
@@ -42,7 +40,6 @@ interface ScanCapture {
 
 export default function AnalyzePage() {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
@@ -59,7 +56,7 @@ export default function AnalyzePage() {
         const saved = sessionStorage.getItem("skinsense_form");
         if (saved) {
           const parsed = JSON.parse(saved);
-          return { ...parsed, image: null, imagePreview: null, scanImages: [], scanPreviews: [] };
+          return { ...parsed, scanImages: [], scanPreviews: [] };
         }
       } catch {}
     }
@@ -76,8 +73,6 @@ export default function AnalyzePage() {
       otherConcern: "",
       city: "",
       useGPS: false,
-      image: null,
-      imagePreview: null,
       scanImages: [],
       scanPreviews: [],
     };
@@ -86,9 +81,7 @@ export default function AnalyzePage() {
   const update = useCallback((patch: Partial<FormState>) => setForm((f) => {
     const next = { ...f, ...patch };
     try {
-      const { image, imagePreview, scanImages, scanPreviews, ...saveable } = next;
-      void image;
-      void imagePreview;
+      const { scanImages, scanPreviews, ...saveable } = next;
       void scanImages;
       void scanPreviews;
       sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
@@ -112,12 +105,6 @@ export default function AnalyzePage() {
   };
 
   const removeProduct = (p: string) => update({ currentProducts: form.currentProducts.filter((x) => x !== p) });
-
-  const handleImage = useCallback((file: File) => {
-    const url = URL.createObjectURL(file);
-    form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
-    update({ image: file, imagePreview: url, scanImages: [], scanPreviews: [] });
-  }, [form.scanPreviews, update]);
 
   const scoreFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const { data } = ctx.getImageData(0, 0, width, height);
@@ -217,30 +204,21 @@ export default function AnalyzePage() {
         .forEach((capture) => URL.revokeObjectURL(capture.preview));
 
       if (best.length === 0) {
-        throw new Error("未能采集到清晰画面，请重试或改用上传照片");
+        throw new Error("未能采集到清晰画面，请调整光线后重试");
       }
 
-      if (form.imagePreview) URL.revokeObjectURL(form.imagePreview);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
       update({
-        image: null,
-        imagePreview: null,
         scanImages: best.map((capture) => capture.file),
         scanPreviews: best.map((capture) => capture.preview),
       });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限或改用上传照片");
+      setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限后重试");
     } finally {
       stopCamera();
       setScanProgress(0);
     }
   };
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) handleImage(file);
-  }, [handleImage]);
 
   const detectGPS = () => {
     if (!navigator.geolocation) return;
@@ -322,7 +300,6 @@ export default function AnalyzePage() {
         city: form.useGPS ? undefined : form.city || undefined,
         latitude: form.useGPS ? form.latitude : undefined,
         longitude: form.useGPS ? form.longitude : undefined,
-        image: form.image,
         images: form.scanImages,
       });
 
@@ -442,40 +419,6 @@ export default function AnalyzePage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">无法使用摄像头时，可上传照片</label>
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                  onClick={() => fileRef.current?.click()}
-                  className="border-2 border-dashed border-rose-200 rounded-2xl p-6 text-center cursor-pointer hover:border-rose-400 hover:bg-rose-50/50 transition-all"
-                >
-                  {form.imagePreview ? (
-                    <div className="relative inline-block">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={form.imagePreview} alt="preview" className="h-32 w-32 object-cover rounded-xl mx-auto" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); update({ image: null, imagePreview: null }); }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center hover:bg-rose-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="w-7 h-7 text-rose-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">拖拽图片到此处，或点击上传</p>
-                    </>
-                  )}
-                </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleImage(e.target.files[0])}
-                />
-              </div>
             </div>
           )}
 
