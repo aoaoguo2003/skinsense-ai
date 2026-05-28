@@ -498,9 +498,9 @@ export default function AnalyzePage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">预算范围（每件单品）</label>
                   <div className="flex justify-between items-center mb-4 px-1">
-                    <span className="text-base font-semibold text-stone-800">¥{form.budgetMin}</span>
+                    <span className="text-base font-semibold text-stone-500">¥{form.budgetMin}</span>
                     <span className="text-xs text-stone-400">—</span>
-                    <span className="text-base font-semibold text-stone-800">
+                    <span className="text-base font-semibold text-stone-500">
                       {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}
                     </span>
                   </div>

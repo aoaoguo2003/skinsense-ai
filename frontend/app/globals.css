@@ -64,9 +64,9 @@ body {
   height: 20px;
   border-radius: 50%;
   background: white;
-  border: 2.5px solid #f43f5e;
+  border: 2.5px solid #78716c;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(244, 63, 94, 0.25);
+  box-shadow: 0 2px 6px rgba(120, 113, 108, 0.25);
 }
 .range-dual input[type="range"]::-webkit-slider-runnable-track {
   background: transparent;
@@ -77,9 +77,9 @@ body {
   height: 20px;
   border-radius: 50%;
   background: white;
-  border: 2.5px solid #f43f5e;
+  border: 2.5px solid #78716c;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(244, 63, 94, 0.25);
+  box-shadow: 0 2px 6px rgba(120, 113, 108, 0.25);
 }
 .range-dual input[type="range"]::-moz-range-track {
   background: transparent;
