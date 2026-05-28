@@ -44,6 +44,7 @@ export default function AnalyzePage() {
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanInstruction, setScanInstruction] = useState("请正对镜头");
+  const [completedScanPhases, setCompletedScanPhases] = useState(0);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   const [form, setForm] = useState<FormState>(() => {
@@ -143,6 +144,7 @@ export default function AnalyzePage() {
     setError("");
     setScanProgress(0);
     setScanInstruction("请正对镜头");
+    setCompletedScanPhases(0);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -199,6 +201,7 @@ export default function AnalyzePage() {
         }
 
         best.push(phaseBest);
+        setCompletedScanPhases(phaseIndex + 1);
         phaseCaptures
           .filter((capture) => capture !== phaseBest)
           .forEach((capture) => URL.revokeObjectURL(capture.preview));
@@ -216,6 +219,7 @@ export default function AnalyzePage() {
     } finally {
       stopCamera();
       setScanProgress(0);
+      setCompletedScanPhases(0);
     }
   };
 
@@ -354,19 +358,19 @@ export default function AnalyzePage() {
                     />
                     {scanning && (
                       <>
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(244,63,94,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(244,63,94,0.08)_1px,transparent_1px)] bg-[size:34px_34px]" />
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(56,189,248,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.10)_1px,transparent_1px)] bg-[size:34px_34px]" />
                         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/60 to-transparent" />
                         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/70 to-transparent" />
-                        <div className="absolute left-8 top-8 h-16 w-16 border-l-2 border-t-2 border-rose-300" />
-                        <div className="absolute right-8 top-8 h-16 w-16 border-r-2 border-t-2 border-rose-300" />
-                        <div className="absolute left-8 bottom-8 h-16 w-16 border-l-2 border-b-2 border-rose-300" />
-                        <div className="absolute right-8 bottom-8 h-16 w-16 border-r-2 border-b-2 border-rose-300" />
-                        <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40 shadow-[0_0_60px_rgba(244,63,94,0.35)]" />
+                        <div className="absolute left-8 top-8 h-16 w-16 border-l-2 border-t-2 border-sky-300" />
+                        <div className="absolute right-8 top-8 h-16 w-16 border-r-2 border-t-2 border-sky-300" />
+                        <div className="absolute left-8 bottom-8 h-16 w-16 border-l-2 border-b-2 border-sky-300" />
+                        <div className="absolute right-8 bottom-8 h-16 w-16 border-r-2 border-b-2 border-sky-300" />
+                        <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100/60 shadow-[0_0_70px_rgba(56,189,248,0.45)]" />
                         <div
-                          className="absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-rose-300 to-transparent shadow-[0_0_18px_rgba(244,63,94,0.9)] transition-all duration-300"
+                          className="absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_20px_rgba(34,211,238,0.95)] transition-all duration-300"
                           style={{ top: `${18 + scanProgress * 0.64}%` }}
                         />
-                        <div className="absolute left-1/2 top-8 -translate-x-1/2 rounded-full border border-white/20 bg-black/35 px-5 py-2 text-xs font-medium tracking-[0.25em] text-rose-100 backdrop-blur">
+                        <div className="absolute left-1/2 top-8 -translate-x-1/2 rounded-full border border-sky-200/30 bg-sky-950/35 px-5 py-2 text-xs font-medium tracking-[0.25em] text-sky-100 backdrop-blur">
                           SKINSCAN ACTIVE
                         </div>
                         <div className="absolute left-1/2 top-[18%] -translate-x-1/2 text-center">
@@ -383,15 +387,25 @@ export default function AnalyzePage() {
                     )}
                     {scanning && (
                       <div className="absolute inset-x-6 bottom-8">
-                        <div className="flex justify-between text-sm text-white mb-2">
-                          <span>{scanInstruction}</span>
-                          <span>{scanProgress}%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-white/20 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-rose-300 to-fuchsia-300 transition-all"
-                            style={{ width: `${scanProgress}%` }}
-                          />
+                        <div className="grid grid-cols-3 gap-3">
+                          {["正脸", "左脸", "右脸"].map((label, index) => {
+                            const done = completedScanPhases > index;
+                            const active = completedScanPhases === index;
+                            return (
+                              <div
+                                key={label}
+                                className={`rounded-xl border px-3 py-2 text-center text-xs font-semibold backdrop-blur ${
+                                  done
+                                    ? "border-cyan-200/50 bg-cyan-300/20 text-cyan-100"
+                                    : active
+                                      ? "border-sky-300/50 bg-sky-500/20 text-sky-100"
+                                      : "border-white/15 bg-black/20 text-white/45"
+                                }`}
+                              >
+                                {label}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
