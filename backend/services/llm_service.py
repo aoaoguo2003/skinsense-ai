@@ -160,7 +160,7 @@ async def analyze_with_claude(
     last_err = None
     for attempt in range(3):
         response = await client.messages.create(
-            model="claude-opus-4-8",
+            model="claude-sonnet-4-6",
             max_tokens=8000,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": content}],
