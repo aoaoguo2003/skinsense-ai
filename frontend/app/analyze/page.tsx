@@ -382,7 +382,7 @@ export default function AnalyzePage() {
                     {!scanning && (
                       <div className="text-center px-6">
                         <Camera className="w-9 h-9 text-rose-300 mx-auto mb-3" />
-                        <p className="text-sm text-white font-medium">准备好后开始采集</p>
+                        <p className="text-sm text-white font-medium">准备好后开始扫描</p>
                       </div>
                     )}
                     {scanning && (
@@ -412,7 +412,7 @@ export default function AnalyzePage() {
                   </div>
                   <canvas ref={canvasRef} className="hidden" />
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
                     <button
                       type="button"
                       onClick={startFaceScan}
@@ -420,7 +420,7 @@ export default function AnalyzePage() {
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white text-sm font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
                     >
                       {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                      {scanning ? "采集中..." : "开始采集"}
+                      {scanning ? "扫描中..." : "开始扫描"}
                     </button>
                     {form.scanPreviews.length > 0 && (
                       <button
@@ -432,15 +432,15 @@ export default function AnalyzePage() {
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-rose-300"
                       >
                         <X className="w-4 h-4" />
-                        重新采集
+                        重新扫描
                       </button>
                     )}
                   </div>
 
                   {form.scanPreviews.length > 0 && (
-                    <div className="mt-4">
-                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                        面部采集已完成
+                    <div className="mt-4 flex justify-center">
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700">
+                        面部扫描已完成
                       </div>
                     </div>
                   )}
