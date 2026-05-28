@@ -430,7 +430,7 @@ export default function AnalyzePage() {
                       type="button"
                       onClick={startFaceScan}
                       disabled={loading || scanning}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 hover:shadow-lg disabled:opacity-50 transition-all"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-900 border border-gray-200 text-sm font-semibold hover:bg-stone-50 hover:shadow-md disabled:opacity-50 transition-all"
                     >
                       {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                       {scanning ? "扫描中..." : "开始扫描"}
@@ -561,8 +561,8 @@ export default function AnalyzePage() {
                     disabled={gpsLocating}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
                       form.useGPS
-                        ? "bg-stone-800 text-white border-transparent"
-                        : "border-stone-200 text-stone-700 hover:border-stone-400"
+                        ? "bg-white text-gray-900 border border-gray-900"
+                        : "border-gray-200 text-gray-700 hover:border-gray-400"
                     }`}
                   >
                     <MapPin className="w-4 h-4" />
@@ -592,7 +592,7 @@ export default function AnalyzePage() {
               <button
                 onClick={() => update({ step: form.step + 1 })}
                 disabled={!canNext()}
-                className="flex items-center gap-2 px-6 py-2.5 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-900 border border-gray-200 rounded-xl font-medium hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 下一步 <ChevronRight className="w-4 h-4" />
               </button>
@@ -601,7 +601,7 @@ export default function AnalyzePage() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex items-center gap-2 px-8 py-2.5 bg-stone-800 text-white rounded-xl font-semibold hover:bg-stone-700 hover:shadow-lg disabled:opacity-50 transition-all"
+                  className="flex items-center gap-2 px-8 py-2.5 bg-white text-gray-900 border border-gray-200 rounded-xl font-semibold hover:bg-stone-50 hover:shadow-md disabled:opacity-50 transition-all"
                 >
                   {loading ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> AI 分析中...</>
