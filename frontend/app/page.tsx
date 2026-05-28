@@ -27,7 +27,7 @@ const features = [
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-stone-900">
+    <main className="min-h-screen bg-stone-100">
       {/* Hero */}
       <section
         className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-cover bg-center bg-no-repeat bg-stone-800"
@@ -65,7 +65,7 @@ export default function HomePage() {
         </div>
 
         {/* Bottom fade into features section */}
-        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-stone-900 to-transparent" />
+        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-stone-100 to-transparent" />
       </section>
 
       {/* Features */}
@@ -73,13 +73,13 @@ export default function HomePage() {
         {features.map((f, i) => (
           <div
             key={i}
-            className="bg-stone-800 border border-stone-700 rounded-2xl p-6 hover:bg-stone-750 hover:border-stone-600 transition-all"
+            className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="w-12 h-12 bg-stone-700 rounded-xl flex items-center justify-center text-stone-200 mb-4">
+            <div className="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center text-stone-600 mb-4">
               {f.icon}
             </div>
-            <h3 className="font-semibold text-white text-lg mb-2">{f.title}</h3>
-            <p className="text-stone-400 text-sm leading-relaxed">{f.desc}</p>
+            <h3 className="font-semibold text-stone-900 text-lg mb-2">{f.title}</h3>
+            <p className="text-stone-500 text-sm leading-relaxed">{f.desc}</p>
           </div>
         ))}
       </section>

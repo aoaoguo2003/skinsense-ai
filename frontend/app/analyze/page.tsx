@@ -353,18 +353,18 @@ export default function AnalyzePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 py-12 px-4">
+    <main className="min-h-screen bg-stone-100 py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
           {[1, 2].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                form.step >= s ? "bg-gradient-to-br from-rose-500 to-fuchsia-500 text-white" : "bg-white text-gray-400 border"
+                form.step >= s ? "bg-stone-800 text-white" : "bg-white text-stone-400 border border-stone-200"
               }`}>
                 {s}
               </div>
-              {s < 2 && <div className={`flex-1 h-1 w-16 rounded ${form.step > s ? "bg-rose-300" : "bg-gray-200"}`} />}
+              {s < 2 && <div className={`flex-1 h-1 w-16 rounded ${form.step > s ? "bg-stone-500" : "bg-stone-200"}`} />}
             </div>
           ))}
           <span className="ml-auto text-sm text-gray-500">
@@ -372,7 +372,7 @@ export default function AnalyzePage() {
           </span>
         </div>
 
-        <div className="bg-white/80 backdrop-blur rounded-3xl shadow-lg p-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-stone-200 p-8">
 
           {/* Step 1: Face scan */}
           {form.step === 1 && (
@@ -381,7 +381,7 @@ export default function AnalyzePage() {
               <p className="text-sm text-gray-500 -mt-2">保持正对镜头，使用自然、稳定的光线。</p>
 
               <div>
-                <div className="rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
                   <div className={`relative overflow-hidden bg-gray-950 flex items-center justify-center transition-all ${
                     scanning
                       ? "fixed inset-0 z-50 rounded-none aspect-auto"
@@ -430,7 +430,7 @@ export default function AnalyzePage() {
                       type="button"
                       onClick={startFaceScan}
                       disabled={loading || scanning}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white text-sm font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 hover:shadow-lg disabled:opacity-50 transition-all"
                     >
                       {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                       {scanning ? "扫描中..." : "开始扫描"}
@@ -460,7 +460,7 @@ export default function AnalyzePage() {
                 <div className="range-dual relative h-2 mx-2">
                   <div className="absolute inset-0 rounded-full bg-gray-100" />
                   <div
-                    className="absolute h-full rounded-full bg-gradient-to-r from-rose-400 to-fuchsia-500"
+                    className="absolute h-full rounded-full bg-stone-700"
                     style={{
                       left: `${(BUDGET_VALUES.indexOf(form.budgetMin) / (BUDGET_VALUES.length - 1)) * 100}%`,
                       right: `${((BUDGET_VALUES.length - 1 - BUDGET_VALUES.indexOf(form.budgetMax)) / (BUDGET_VALUES.length - 1)) * 100}%`,
@@ -514,7 +514,7 @@ export default function AnalyzePage() {
                   <select
                     value={form.texture}
                     onChange={(e) => update({ texture: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
                   >
                     <option value="">请选择</option>
                     {TEXTURES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -525,7 +525,7 @@ export default function AnalyzePage() {
                   <select
                     value={form.fragrance}
                     onChange={(e) => update({ fragrance: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
                   >
                     <option value="">请选择</option>
                     {FRAGRANCES.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -540,7 +540,7 @@ export default function AnalyzePage() {
                   value={form.avoidIngredients}
                   onChange={(e) => update({ avoidIngredients: e.target.value })}
                   placeholder="例如：酒精、香料、矿油..."
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
                 />
               </div>
 
@@ -553,7 +553,7 @@ export default function AnalyzePage() {
                     onChange={(e) => update({ city: e.target.value, useGPS: false })}
                     placeholder="例如：北京、Shanghai、London..."
                     readOnly={gpsLocating}
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
                   />
                   <button
                     type="button"
@@ -561,8 +561,8 @@ export default function AnalyzePage() {
                     disabled={gpsLocating}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
                       form.useGPS
-                        ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
-                        : "border-gray-200 text-gray-700 hover:border-rose-300"
+                        ? "bg-stone-800 text-white border-transparent"
+                        : "border-stone-200 text-stone-700 hover:border-stone-400"
                     }`}
                   >
                     <MapPin className="w-4 h-4" />
@@ -592,7 +592,7 @@ export default function AnalyzePage() {
               <button
                 onClick={() => update({ step: form.step + 1 })}
                 disabled={!canNext()}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-stone-800 text-white rounded-xl font-medium hover:bg-stone-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 下一步 <ChevronRight className="w-4 h-4" />
               </button>
@@ -601,7 +601,7 @@ export default function AnalyzePage() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex items-center gap-2 px-8 py-2.5 bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
+                  className="flex items-center gap-2 px-8 py-2.5 bg-stone-800 text-white rounded-xl font-semibold hover:bg-stone-700 hover:shadow-lg disabled:opacity-50 transition-all"
                 >
                   {loading ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> AI 分析中...</>
@@ -625,7 +625,7 @@ export default function AnalyzePage() {
               </div>
               <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-rose-400 to-fuchsia-500 rounded-full transition-all duration-500"
+                  className="h-full bg-stone-700 rounded-full transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
