@@ -30,13 +30,11 @@ export default function HomePage() {
     <main className="min-h-screen bg-white">
       {/* Hero */}
       <section
-        className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-cover bg-center bg-no-repeat"
+        className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-cover bg-center bg-no-repeat bg-stone-800"
         style={{ backgroundImage: "url('/hero.jpg')" }}
       >
-        {/* Fallback gradient if image is missing */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-stone-800 to-gray-900" />
         {/* Dark scrim over image */}
-        <div className="absolute inset-0 bg-black/45" />
+        <div className="absolute inset-0 bg-black/40" />
 
         <div className="relative z-10 flex flex-col items-center max-w-3xl">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 font-medium mb-8">
