@@ -498,9 +498,9 @@ export default function AnalyzePage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">预算范围（每件单品）</label>
                   <div className="flex justify-between items-center mb-4 px-1">
-                    <span className="text-base font-semibold text-rose-500">¥{form.budgetMin}</span>
-                    <span className="text-xs text-gray-400">—</span>
-                    <span className="text-base font-semibold text-fuchsia-500">
+                    <span className="text-base font-semibold text-stone-800">¥{form.budgetMin}</span>
+                    <span className="text-xs text-stone-400">—</span>
+                    <span className="text-base font-semibold text-stone-800">
                       {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}
                     </span>
                   </div>
@@ -545,7 +545,7 @@ export default function AnalyzePage() {
                       return (
                         <span
                           key={value}
-                          className="absolute text-xs text-gray-400 -translate-x-1/2"
+                          className="absolute text-xs text-stone-500 -translate-x-1/2"
                           style={{ left: `${pct}%` }}
                         >
                           {value === 10000 ? "¥10000+" : `¥${value}`}
@@ -683,7 +683,7 @@ export default function AnalyzePage() {
             <div className="mt-5">
               <div className="flex justify-between text-xs text-gray-500 mb-1.5">
                 <span>{progressLabel}</span>
-                <span className="font-medium text-rose-500">{progress}%</span>
+                <span className="font-medium text-stone-700">{progress}%</span>
               </div>
               <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
