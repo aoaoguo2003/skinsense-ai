@@ -6,7 +6,7 @@ const features = [
   {
     icon: <Camera className="w-6 h-6" />,
     title: "智能肌肤分析",
-    desc: "上传自拍或填写问卷，精准识别你的肤质、肤色和皮肤问题",
+    desc: "用摄像头扫描正脸与侧脸，AI 精准识别你的肤质、肤色和皮肤问题",
   },
   {
     icon: <Sparkles className="w-6 h-6" />,
@@ -16,7 +16,7 @@ const features = [
   {
     icon: <FlaskConical className="w-6 h-6" />,
     title: "成分深度解析",
-    desc: "了解每款产品的关键成分，检测现有产品的成分互斥与协同效果",
+    desc: "了解每款推荐产品的关键成分，检测成分互斥冲突，发现协同增效组合",
   },
   {
     icon: <CloudSun className="w-6 h-6" />,
@@ -27,41 +27,57 @@ const features = [
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50">
-      <section className="flex flex-col items-center justify-center px-6 pt-24 pb-16 text-center">
-        <div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur border border-rose-200 rounded-full px-4 py-1.5 text-sm text-rose-600 font-medium mb-8 shadow-sm">
-          <Sparkles className="w-4 h-4" />
-          你的专业美容顾问
+    <main className="min-h-screen bg-white">
+      {/* Hero */}
+      <section
+        className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/hero.jpg')" }}
+      >
+        {/* Fallback gradient if image is missing */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-stone-800 to-gray-900" />
+        {/* Dark scrim over image */}
+        <div className="absolute inset-0 bg-black/45" />
+
+        <div className="relative z-10 flex flex-col items-center max-w-3xl">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 font-medium mb-8">
+            <Sparkles className="w-4 h-4" />
+            你的专业美容顾问
+          </div>
+
+          <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight">
+            了解你的肌肤，
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-fuchsia-300">
+              找到专属配方
+            </span>
+          </h1>
+
+          <p className="mt-6 text-lg text-white/70 max-w-xl leading-relaxed">
+            用摄像头扫描面部，告诉我们你的产品偏好，AI 即刻分析肤质、检测成分冲突，
+            并结合当地天气推荐最适合你的护肤与彩妆产品。
+          </p>
+
+          <Link
+            href="/analyze"
+            className="mt-10 inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+          >
+            开始检测
+            <ArrowRight className="w-5 h-5" />
+          </Link>
         </div>
 
-        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight max-w-3xl">
-          了解你的肌肤，
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-fuchsia-500">
-            找到专属配方
-          </span>
-        </h1>
-
-        <p className="mt-6 text-lg text-gray-600 max-w-xl leading-relaxed">
-          用摄像头扫描面部，告诉我们你的产品偏好，AI 即刻分析肤质、检测成分冲突，
-          并结合当地天气推荐最适合你的护肤与彩妆产品。
-        </p>
-
-        <Link
-          href="/analyze"
-          className="mt-10 inline-flex items-center gap-2 bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
-        >
-          开始检测
-          <ArrowRight className="w-5 h-5" />
-        </Link>
+        {/* Bottom fade into features section */}
+        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white to-transparent" />
       </section>
 
-      <section className="max-w-5xl mx-auto px-6 pb-24 grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Features */}
+      <section className="max-w-5xl mx-auto px-6 pb-24 pt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
         {features.map((f, i) => (
           <div
             key={i}
-            className="bg-white/70 backdrop-blur border border-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
+            className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-rose-100 to-fuchsia-100 rounded-xl flex items-center justify-center text-rose-500 mb-4">
+            <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-700 mb-4">
               {f.icon}
             </div>
             <h3 className="font-semibold text-gray-900 text-lg mb-2">{f.title}</h3>
