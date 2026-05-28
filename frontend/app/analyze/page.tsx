@@ -389,19 +389,19 @@ export default function AnalyzePage() {
       />
       {scanning && (
         <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-          <div className="absolute inset-0 bg-sky-950/20 mix-blend-screen" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_32%,rgba(2,132,199,0.18)_58%,rgba(2,6,23,0.72)_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(125,211,252,0.13)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.13)_1px,transparent_1px)] bg-[size:34px_34px]" />
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-sky-950/80 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-sky-950/85 to-transparent" />
-          <div className="absolute left-8 top-8 h-16 w-16 border-l-2 border-t-2 border-sky-300" />
-          <div className="absolute right-8 top-8 h-16 w-16 border-r-2 border-t-2 border-sky-300" />
-          <div className="absolute left-8 bottom-8 h-16 w-16 border-l-2 border-b-2 border-sky-300" />
-          <div className="absolute right-8 bottom-8 h-16 w-16 border-r-2 border-b-2 border-sky-300" />
-          <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100/35 shadow-[0_0_44px_rgba(56,189,248,0.28)]" />
-          <div className="absolute left-1/2 top-1/2 h-[64vh] w-[44vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/10" />
-          <div className="animate-scan-sweep absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-200 to-transparent shadow-[0_0_28px_rgba(34,211,238,0.95)]" />
-          <div className="absolute left-1/2 top-8 -translate-x-1/2 rounded-full border border-sky-200/30 bg-sky-950/35 px-5 py-2 text-xs font-medium tracking-[0.25em] text-sky-100 backdrop-blur">
+          <div className="absolute inset-0 bg-black/15 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_32%,rgba(180,130,0,0.14)_58%,rgba(0,0,0,0.72)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(251,191,36,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(251,191,36,0.07)_1px,transparent_1px)] bg-[size:34px_34px]" />
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-black/85 to-transparent" />
+          <div className="absolute left-8 top-8 h-16 w-16 border-l-2 border-t-2 border-amber-400" />
+          <div className="absolute right-8 top-8 h-16 w-16 border-r-2 border-t-2 border-amber-400" />
+          <div className="absolute left-8 bottom-8 h-16 w-16 border-l-2 border-b-2 border-amber-400" />
+          <div className="absolute right-8 bottom-8 h-16 w-16 border-r-2 border-b-2 border-amber-400" />
+          <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-300/30 shadow-[0_0_44px_rgba(251,191,36,0.22)]" />
+          <div className="absolute left-1/2 top-1/2 h-[64vh] w-[44vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-400/10" />
+          <div className="animate-scan-sweep absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-amber-300 to-transparent shadow-[0_0_28px_rgba(251,191,36,0.95)]" />
+          <div className="absolute left-1/2 top-8 -translate-x-1/2 rounded-full border border-amber-400/30 bg-black/40 px-5 py-2 text-xs font-medium tracking-[0.25em] text-amber-200 backdrop-blur">
             SKINSCAN ACTIVE
           </div>
           <div className="absolute left-1/2 top-[18%] -translate-x-1/2 text-center">
@@ -440,26 +440,26 @@ export default function AnalyzePage() {
 
               <div>
                 <div className="rounded-2xl border border-stone-200/80 bg-stone-50/80 p-4 shadow-inner">
-                  <div className="relative overflow-hidden rounded-xl aspect-video bg-sky-950 flex items-center justify-center">
-                    <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.18),transparent_38%),linear-gradient(135deg,#020617,#082f49_52%,#0f172a)]">
-                      <div className="absolute inset-0 bg-[linear-gradient(rgba(125,211,252,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.14)_1px,transparent_1px)] bg-[size:32px_32px]" />
-                      <div className="absolute left-1/2 top-1/2 h-[70%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-200/5 shadow-[0_0_38px_rgba(56,189,248,0.18)]" />
-                      <div className="absolute left-8 top-8 h-12 w-12 border-l-2 border-t-2 border-sky-300/70" />
-                      <div className="absolute right-8 top-8 h-12 w-12 border-r-2 border-t-2 border-sky-300/70" />
-                      <div className="absolute left-8 bottom-8 h-12 w-12 border-l-2 border-b-2 border-sky-300/70" />
-                      <div className="absolute right-8 bottom-8 h-12 w-12 border-r-2 border-b-2 border-sky-300/70" />
-                      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-sky-950 to-transparent" />
+                  <div className="relative overflow-hidden rounded-xl aspect-video bg-neutral-950 flex items-center justify-center">
+                    <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.1),transparent_40%),linear-gradient(135deg,#0a0a0a,#1a1200_52%,#0d0d0d)]">
+                      <div className="absolute inset-0 bg-[linear-gradient(rgba(251,191,36,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(251,191,36,0.07)_1px,transparent_1px)] bg-[size:32px_32px]" />
+                      <div className="absolute left-1/2 top-1/2 h-[70%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-300/5 shadow-[0_0_38px_rgba(251,191,36,0.15)]" />
+                      <div className="absolute left-8 top-8 h-12 w-12 border-l-2 border-t-2 border-amber-400/70" />
+                      <div className="absolute right-8 top-8 h-12 w-12 border-r-2 border-t-2 border-amber-400/70" />
+                      <div className="absolute left-8 bottom-8 h-12 w-12 border-l-2 border-b-2 border-amber-400/70" />
+                      <div className="absolute right-8 bottom-8 h-12 w-12 border-r-2 border-b-2 border-amber-400/70" />
+                      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-neutral-950 to-transparent" />
                     </div>
                     <div className="relative z-10 text-center px-6">
                       {scanComplete ? (
                         <>
-                          <CheckCircle2 className="w-10 h-10 text-cyan-200 mx-auto mb-3" />
+                          <CheckCircle2 className="w-10 h-10 text-amber-300 mx-auto mb-3" />
                           <p className="text-base font-semibold text-white">扫描完成</p>
-                          <p className="mt-2 text-xs text-cyan-100/75">已完成正脸、左脸、右脸采集</p>
+                          <p className="mt-2 text-xs text-amber-200/75">已完成正脸、左脸、右脸采集</p>
                         </>
                       ) : (
                         <>
-                          <Camera className="w-9 h-9 text-cyan-200 mx-auto mb-3" />
+                          <Camera className="w-9 h-9 text-amber-300 mx-auto mb-3" />
                           <p className="text-sm text-white font-medium">准备好后开始扫描</p>
                         </>
                       )}
