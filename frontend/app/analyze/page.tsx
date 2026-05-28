@@ -206,8 +206,6 @@ export default function AnalyzePage() {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "user",
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
         },
         audio: false,
       });
