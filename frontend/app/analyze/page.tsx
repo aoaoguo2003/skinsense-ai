@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Camera, MapPin, ChevronRight, ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
 
@@ -177,6 +177,7 @@ export default function AnalyzePage() {
 
   const startFaceScan = async () => {
     if (loading || scanning) return;
+    let scanSucceeded = false;
     setError("");
     setScanProgress(0);
     setScanInstruction("请正对镜头");
@@ -250,13 +251,13 @@ export default function AnalyzePage() {
         scanImages: best.map((capture) => capture.file),
         scanPreviews: best.map((capture) => capture.preview),
       });
+      scanSucceeded = true;
       await new Promise((resolve) => setTimeout(resolve, 900));
-      update({ step: 2 });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限后重试");
     } finally {
       stopCamera();
-      setScanProgress(0);
+      if (!scanSucceeded) setScanProgress(0);
     }
   };
 
@@ -311,9 +312,10 @@ export default function AnalyzePage() {
     progress < 55 ? "正在制定护肤方案..." :
     progress < 80 ? "正在筛选产品推荐..." :
     "即将完成...";
+  const scanComplete = form.scanImages.length >= 3;
 
   const canNext = () => {
-    if (form.step === 1) return true;
+    if (form.step === 1) return scanComplete;
     return true;
   };
 
@@ -353,8 +355,14 @@ export default function AnalyzePage() {
   };
 
   return (
-    <main className="min-h-screen bg-white py-12 px-4">
-      <div className={`${form.step === 2 ? "max-w-5xl" : "max-w-2xl"} mx-auto transition-all duration-500`}>
+    <main className="relative min-h-screen overflow-hidden bg-stone-100 px-4 py-12">
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-[0.08]"
+        style={{ backgroundImage: "url('/report-bg.jpg')" }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.88),rgba(245,245,244,0.76)_42%,rgba(231,229,228,0.88))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(120,113,108,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(120,113,108,0.055)_1px,transparent_1px)] bg-[size:42px_42px]" />
+      <div className={`relative z-10 ${form.step === 2 ? "max-w-5xl" : "max-w-2xl"} mx-auto transition-all duration-500`}>
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
           {[1, 2].map((s) => (
@@ -372,7 +380,7 @@ export default function AnalyzePage() {
           </span>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8">
+        <div className="rounded-3xl border border-white/70 bg-white/88 p-6 shadow-2xl shadow-stone-300/55 backdrop-blur md:p-8">
 
           {/* Step 1: Face scan */}
           {form.step === 1 && (
@@ -381,11 +389,11 @@ export default function AnalyzePage() {
               <p className="text-sm text-gray-500 -mt-2">保持正对镜头，使用自然、稳定的光线。</p>
 
               <div>
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/80 p-4 shadow-inner">
                   <div className={`relative overflow-hidden bg-gray-950 flex items-center justify-center transition-all ${
                     scanning
                       ? "fixed inset-0 z-50 rounded-none aspect-auto bg-sky-950"
-                      : "rounded-xl aspect-video"
+                      : "rounded-xl aspect-video bg-sky-950"
                   }`}>
                     <video
                       ref={videoRef}
@@ -420,9 +428,30 @@ export default function AnalyzePage() {
                       </>
                     )}
                     {!scanning && (
-                      <div className="text-center px-6">
-                        <Camera className="w-9 h-9 text-rose-300 mx-auto mb-3" />
-                        <p className="text-sm text-white font-medium">准备好后开始扫描</p>
+                      <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.18),transparent_38%),linear-gradient(135deg,#020617,#082f49_52%,#0f172a)]">
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(125,211,252,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.14)_1px,transparent_1px)] bg-[size:32px_32px]" />
+                        <div className="absolute left-1/2 top-1/2 h-[70%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-100/35 shadow-[0_0_48px_rgba(56,189,248,0.25)]" />
+                        <div className="absolute left-8 top-8 h-12 w-12 border-l-2 border-t-2 border-sky-300/70" />
+                        <div className="absolute right-8 top-8 h-12 w-12 border-r-2 border-t-2 border-sky-300/70" />
+                        <div className="absolute left-8 bottom-8 h-12 w-12 border-l-2 border-b-2 border-sky-300/70" />
+                        <div className="absolute right-8 bottom-8 h-12 w-12 border-r-2 border-b-2 border-sky-300/70" />
+                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-sky-950 to-transparent" />
+                      </div>
+                    )}
+                    {!scanning && (
+                      <div className="relative z-10 text-center px-6">
+                        {scanComplete ? (
+                          <>
+                            <CheckCircle2 className="w-10 h-10 text-cyan-200 mx-auto mb-3" />
+                            <p className="text-base font-semibold text-white">扫描完成</p>
+                            <p className="mt-2 text-xs text-cyan-100/75">已完成正脸、左脸、右脸采集</p>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-9 h-9 text-cyan-200 mx-auto mb-3" />
+                            <p className="text-sm text-white font-medium">准备好后开始扫描</p>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -432,11 +461,11 @@ export default function AnalyzePage() {
                     <button
                       type="button"
                       onClick={startFaceScan}
-                      disabled={loading || scanning}
+                      disabled={loading || scanning || scanComplete}
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-900 border border-gray-200 text-sm font-semibold hover:bg-stone-50 hover:shadow-md disabled:opacity-50 transition-all"
                     >
-                      {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                      {scanning ? "扫描中..." : "开始扫描"}
+                      {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : scanComplete ? <CheckCircle2 className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+                      {scanning ? "扫描中..." : scanComplete ? "扫描完成" : "开始扫描"}
                     </button>
                   </div>
 
