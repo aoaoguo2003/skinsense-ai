@@ -642,7 +642,7 @@ export default function AnalyzePage() {
           )}
 
           {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-100">
+          <div className={`flex justify-between mt-8 pt-6 ${form.step === 1 ? "" : "border-t border-gray-100"}`}>
             <button
               onClick={() => update({ step: form.step - 1 })}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors ${form.step === 1 ? "invisible" : ""}`}
