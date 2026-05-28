@@ -242,22 +242,27 @@ export default function ResultsPage() {
         </div>
 
         {/* Skin Analysis */}
-        <div className="bg-white rounded-3xl shadow-sm p-6">
-          <div className="flex items-start gap-6">
+        <div className="relative overflow-hidden rounded-3xl border border-stone-100 bg-white p-6 shadow-sm">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-[0.18]"
+            style={{ backgroundImage: "url('/report-bg.jpg')" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/92 to-white/70" />
+          <div className="relative flex items-start gap-6">
             <ScoreRing score={skin_analysis.condition_score} />
             <div className="flex-1">
               <div className="flex flex-wrap gap-2 mb-3">
-                <span className="bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                <span className="bg-stone-900 text-white text-xs font-semibold px-3 py-1 rounded-full">
                   {skin_analysis.skin_type}
                 </span>
-                <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
+                <span className="bg-white/80 text-gray-600 text-xs font-medium px-3 py-1 rounded-full ring-1 ring-stone-200">
                   肤色：{skin_analysis.skin_tone}
                 </span>
               </div>
               <p className="text-sm text-gray-600 leading-relaxed">{skin_analysis.summary}</p>
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {skin_analysis.main_concerns.map((c, i) => (
-                  <span key={i} className="text-xs bg-rose-50 text-rose-600 border border-rose-100 px-2 py-0.5 rounded-full">{c}</span>
+                  <span key={i} className="text-xs bg-white/80 text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full">{c}</span>
                 ))}
               </div>
             </div>

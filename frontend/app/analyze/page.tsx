@@ -354,7 +354,7 @@ export default function AnalyzePage() {
 
   return (
     <main className="min-h-screen bg-white py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className={`${form.step === 2 ? "max-w-5xl" : "max-w-2xl"} mx-auto transition-all duration-500`}>
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
           {[1, 2].map((s) => (
@@ -372,7 +372,7 @@ export default function AnalyzePage() {
           </span>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-2xl p-8">
+        <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8">
 
           {/* Step 1: Face scan */}
           {form.step === 1 && (
@@ -384,7 +384,7 @@ export default function AnalyzePage() {
                 <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
                   <div className={`relative overflow-hidden bg-gray-950 flex items-center justify-center transition-all ${
                     scanning
-                      ? "fixed inset-0 z-50 rounded-none aspect-auto"
+                      ? "fixed inset-0 z-50 rounded-none aspect-auto bg-sky-950"
                       : "rounded-xl aspect-video"
                   }`}>
                     <video
@@ -395,16 +395,19 @@ export default function AnalyzePage() {
                     />
                     {scanning && (
                       <>
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(56,189,248,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.10)_1px,transparent_1px)] bg-[size:34px_34px]" />
-                        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/60 to-transparent" />
-                        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/70 to-transparent" />
+                        <div className="absolute inset-0 bg-sky-950/20 mix-blend-screen" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_32%,rgba(2,132,199,0.18)_58%,rgba(2,6,23,0.72)_100%)]" />
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(125,211,252,0.13)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.13)_1px,transparent_1px)] bg-[size:34px_34px]" />
+                        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-sky-950/80 to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-sky-950/85 to-transparent" />
                         <div className="absolute left-8 top-8 h-16 w-16 border-l-2 border-t-2 border-sky-300" />
                         <div className="absolute right-8 top-8 h-16 w-16 border-r-2 border-t-2 border-sky-300" />
                         <div className="absolute left-8 bottom-8 h-16 w-16 border-l-2 border-b-2 border-sky-300" />
                         <div className="absolute right-8 bottom-8 h-16 w-16 border-r-2 border-b-2 border-sky-300" />
                         <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100/60 shadow-[0_0_70px_rgba(56,189,248,0.45)]" />
+                        <div className="absolute left-1/2 top-1/2 h-[64vh] w-[44vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/15" />
                         <div
-                          className="absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_20px_rgba(34,211,238,0.95)] transition-all duration-300"
+                          className="absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-200 to-transparent shadow-[0_0_28px_rgba(34,211,238,0.95)] transition-all duration-300"
                           style={{ top: `${18 + scanProgress * 0.64}%` }}
                         />
                         <div className="absolute left-1/2 top-8 -translate-x-1/2 rounded-full border border-sky-200/30 bg-sky-950/35 px-5 py-2 text-xs font-medium tracking-[0.25em] text-sky-100 backdrop-blur">
@@ -445,137 +448,153 @@ export default function AnalyzePage() {
 
           {/* Step 2: Preferences */}
           {form.step === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">产品偏好</h2>
+            <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-stretch">
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-gray-900">产品偏好</h2>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">预算范围（每件单品）</label>
-                <div className="flex justify-between items-center mb-4 px-1">
-                  <span className="text-base font-semibold text-rose-500">¥{form.budgetMin}</span>
-                  <span className="text-xs text-gray-400">—</span>
-                  <span className="text-base font-semibold text-fuchsia-500">
-                    {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}
-                  </span>
-                </div>
-                <div className="range-dual relative h-2 mx-2">
-                  <div className="absolute inset-0 rounded-full bg-gray-100" />
-                  <div
-                    className="absolute h-full rounded-full bg-stone-700"
-                    style={{
-                      left: `${(BUDGET_VALUES.indexOf(form.budgetMin) / (BUDGET_VALUES.length - 1)) * 100}%`,
-                      right: `${((BUDGET_VALUES.length - 1 - BUDGET_VALUES.indexOf(form.budgetMax)) / (BUDGET_VALUES.length - 1)) * 100}%`,
-                    }}
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={BUDGET_VALUES.length - 1}
-                    step={1}
-                    value={BUDGET_VALUES.indexOf(form.budgetMin)}
-                    onChange={(e) => {
-                      const i = Number(e.target.value);
-                      if (i < BUDGET_VALUES.indexOf(form.budgetMax) - 1) update({ budgetMin: BUDGET_VALUES[i] });
-                    }}
-                    style={{ zIndex: BUDGET_VALUES.indexOf(form.budgetMin) >= BUDGET_VALUES.length - 2 ? 5 : 3 }}
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={BUDGET_VALUES.length - 1}
-                    step={1}
-                    value={BUDGET_VALUES.indexOf(form.budgetMax)}
-                    onChange={(e) => {
-                      const i = Number(e.target.value);
-                      if (i > BUDGET_VALUES.indexOf(form.budgetMin) + 1) update({ budgetMax: BUDGET_VALUES[i] });
-                    }}
-                    style={{ zIndex: BUDGET_VALUES.indexOf(form.budgetMin) >= BUDGET_VALUES.length - 2 ? 3 : 5 }}
-                  />
-                </div>
-                <div className="relative mt-3 px-1 h-5">
-                  {([0, 1000, 2000, 10000] as const).map((value) => {
-                    const idx = BUDGET_VALUES.indexOf(value);
-                    const pct = (idx / (BUDGET_VALUES.length - 1)) * 100;
-                    return (
-                      <span
-                        key={value}
-                        className="absolute text-xs text-gray-400 -translate-x-1/2"
-                        style={{ left: `${pct}%` }}
-                      >
-                        {value === 10000 ? "¥10000+" : `¥${value}`}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">产品质地偏好</label>
-                  <select
-                    value={form.texture}
-                    onChange={(e) => update({ texture: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
-                  >
-                    <option value="">请选择</option>
-                    {TEXTURES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">预算范围（每件单品）</label>
+                  <div className="flex justify-between items-center mb-4 px-1">
+                    <span className="text-base font-semibold text-rose-500">¥{form.budgetMin}</span>
+                    <span className="text-xs text-gray-400">—</span>
+                    <span className="text-base font-semibold text-fuchsia-500">
+                      {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}
+                    </span>
+                  </div>
+                  <div className="range-dual relative h-2 mx-2">
+                    <div className="absolute inset-0 rounded-full bg-gray-100" />
+                    <div
+                      className="absolute h-full rounded-full bg-stone-700"
+                      style={{
+                        left: `${(BUDGET_VALUES.indexOf(form.budgetMin) / (BUDGET_VALUES.length - 1)) * 100}%`,
+                        right: `${((BUDGET_VALUES.length - 1 - BUDGET_VALUES.indexOf(form.budgetMax)) / (BUDGET_VALUES.length - 1)) * 100}%`,
+                      }}
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={BUDGET_VALUES.length - 1}
+                      step={1}
+                      value={BUDGET_VALUES.indexOf(form.budgetMin)}
+                      onChange={(e) => {
+                        const i = Number(e.target.value);
+                        if (i < BUDGET_VALUES.indexOf(form.budgetMax) - 1) update({ budgetMin: BUDGET_VALUES[i] });
+                      }}
+                      style={{ zIndex: BUDGET_VALUES.indexOf(form.budgetMin) >= BUDGET_VALUES.length - 2 ? 5 : 3 }}
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={BUDGET_VALUES.length - 1}
+                      step={1}
+                      value={BUDGET_VALUES.indexOf(form.budgetMax)}
+                      onChange={(e) => {
+                        const i = Number(e.target.value);
+                        if (i > BUDGET_VALUES.indexOf(form.budgetMin) + 1) update({ budgetMax: BUDGET_VALUES[i] });
+                      }}
+                      style={{ zIndex: BUDGET_VALUES.indexOf(form.budgetMin) >= BUDGET_VALUES.length - 2 ? 3 : 5 }}
+                    />
+                  </div>
+                  <div className="relative mt-3 px-1 h-5">
+                    {([0, 1000, 2000, 10000] as const).map((value) => {
+                      const idx = BUDGET_VALUES.indexOf(value);
+                      const pct = (idx / (BUDGET_VALUES.length - 1)) * 100;
+                      return (
+                        <span
+                          key={value}
+                          className="absolute text-xs text-gray-400 -translate-x-1/2"
+                          style={{ left: `${pct}%` }}
+                        >
+                          {value === 10000 ? "¥10000+" : `¥${value}`}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">产品质地偏好</label>
+                    <select
+                      value={form.texture}
+                      onChange={(e) => update({ texture: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                    >
+                      <option value="">请选择</option>
+                      {TEXTURES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">香味偏好</label>
+                    <select
+                      value={form.fragrance}
+                      onChange={(e) => update({ fragrance: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                    >
+                      <option value="">请选择</option>
+                      {FRAGRANCES.map((f) => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">香味偏好</label>
-                  <select
-                    value={form.fragrance}
-                    onChange={(e) => update({ fragrance: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
-                  >
-                    <option value="">请选择</option>
-                    {FRAGRANCES.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">需要避免的成分（可选）</label>
-                <input
-                  type="text"
-                  value={form.avoidIngredients}
-                  onChange={(e) => update({ avoidIngredients: e.target.value })}
-                  placeholder="例如：酒精、香料、矿油..."
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">所在城市</label>
-                <div className="flex gap-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">需要避免的成分（可选）</label>
                   <input
                     type="text"
-                    value={gpsLocating ? "定位中..." : form.city}
-                    onChange={(e) => update({ city: e.target.value, useGPS: false })}
-                    placeholder="例如：北京、Shanghai、London..."
-                    readOnly={gpsLocating}
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                    value={form.avoidIngredients}
+                    onChange={(e) => update({ avoidIngredients: e.target.value })}
+                    placeholder="例如：酒精、香料、矿油..."
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
                   />
-                  <button
-                    type="button"
-                    onClick={detectGPS}
-                    disabled={gpsLocating}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
-                      form.useGPS
-                        ? "bg-white text-gray-900 border border-gray-900"
-                        : "border-gray-200 text-gray-700 hover:border-gray-400"
-                    }`}
-                  >
-                    <MapPin className="w-4 h-4" />
-                    {gpsLocating ? "定位中..." : form.useGPS ? "已定位" : "自动定位"}
-                  </button>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">所在城市</label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      type="text"
+                      value={gpsLocating ? "定位中..." : form.city}
+                      onChange={(e) => update({ city: e.target.value, useGPS: false })}
+                      placeholder="例如：北京、Shanghai、London..."
+                      readOnly={gpsLocating}
+                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={detectGPS}
+                      disabled={gpsLocating}
+                      className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
+                        form.useGPS
+                          ? "bg-white text-gray-900 border border-gray-900"
+                          : "border-gray-200 text-gray-700 hover:border-gray-400"
+                      }`}
+                    >
+                      <MapPin className="w-4 h-4" />
+                      {gpsLocating ? "定位中..." : form.useGPS ? "已定位" : "自动定位"}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+                    {error}
+                  </div>
+                )}
               </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
-                  {error}
+              <div className="relative hidden min-h-[520px] overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 lg:block">
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: "url('/preference-still-life.jpg')" }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/45 via-stone-900/5 to-white/10" />
+                <div className="absolute inset-x-6 bottom-6 rounded-2xl border border-white/30 bg-white/65 p-5 shadow-lg backdrop-blur-md">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Product Profile</p>
+                  <p className="mt-2 text-sm leading-relaxed text-stone-700">
+                    预算、质地、香味和避开成分会参与推荐排序，让结果更贴近你的真实购买偏好。
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
