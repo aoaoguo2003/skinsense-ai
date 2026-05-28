@@ -29,12 +29,17 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-stone-100">
       {/* Hero */}
-      <section
-        className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center bg-cover bg-center bg-no-repeat bg-stone-800"
-        style={{ backgroundImage: "url('/hero.jpg')" }}
-      >
+      <section className="relative min-h-[92vh] md:min-h-screen flex flex-col items-center justify-center px-6 text-center overflow-hidden bg-stone-800">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat md:hidden"
+          style={{ backgroundImage: "url('/hero-mobile.jpg')" }}
+        />
+        <div
+          className="absolute inset-0 hidden bg-cover bg-center bg-no-repeat md:block"
+          style={{ backgroundImage: "url('/hero.jpg')" }}
+        />
         {/* Dark scrim over image */}
-        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 bg-black/45 md:bg-black/40" />
 
         <div className="relative z-10 flex flex-col items-center max-w-3xl">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 font-medium mb-8">
@@ -42,7 +47,7 @@ export default function HomePage() {
             你的专业美容顾问
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight">
             了解你的肌肤，
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-fuchsia-300">
@@ -50,7 +55,7 @@ export default function HomePage() {
             </span>
           </h1>
 
-          <p className="mt-6 text-lg text-white/70 max-w-xl leading-relaxed">
+          <p className="mt-6 text-base md:text-lg text-white/70 max-w-xl leading-relaxed">
             用摄像头扫描面部，告诉我们你的产品偏好，AI 即刻分析肤质、检测成分冲突，
             并结合当地天气推荐最适合你的护肤与彩妆产品。
           </p>
