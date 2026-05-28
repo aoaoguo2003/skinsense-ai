@@ -25,6 +25,13 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Print / PDF export */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+  main { padding: 0 !important; }
+}
+
 /* Face scan sweep animation */
 @keyframes scan-sweep {
   0%   { top: 14%; opacity: 0.6; }

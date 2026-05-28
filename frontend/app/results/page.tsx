@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Sparkles, CloudSun, FlaskConical, AlertTriangle, CheckCircle2,
-  Sun, Moon, ArrowLeft, Leaf, DollarSign, ShoppingBag, Target
+  Sun, Moon, ArrowLeft, Leaf, DollarSign, ShoppingBag, Target,
+  Download, FileImage, FileText, Loader2
 } from "lucide-react";
 import { AnalyzeResponse, ProductRecommendation, IngredientConflict, ConcernSolution } from "@/lib/types";
 import { searchProductImage } from "@/lib/api";
@@ -197,6 +198,9 @@ function ConflictCard({ conflict }: { conflict: IngredientConflict }) {
 
 export default function ResultsPage() {
   const router = useRouter();
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState<"pdf" | "image" | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
   const [data] = useState<AnalyzeResponse | null>(() => {
     if (typeof window === "undefined") return null;
     const raw = sessionStorage.getItem("skinsense_result");
@@ -212,6 +216,37 @@ export default function ResultsPage() {
     if (!data) router.replace("/analyze");
   }, [data, router]);
 
+  const saveAsPDF = () => {
+    setShowMenu(false);
+    setSaving("pdf");
+    setTimeout(() => {
+      window.print();
+      setSaving(null);
+    }, 200);
+  };
+
+  const saveAsImage = async () => {
+    setShowMenu(false);
+    setSaving("image");
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(reportRef.current!, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = `肌肤报告_${new Date().toLocaleDateString("zh-CN").replace(/\//g, "-")}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(null);
+    }
+  };
+
   if (!data) return (
     <div className="min-h-screen flex items-center justify-center bg-rose-50">
       <div className="w-8 h-8 border-4 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
@@ -226,11 +261,11 @@ export default function ResultsPage() {
       <div className="max-w-3xl mx-auto space-y-6">
 
         {/* Header */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 no-print">
           <Link href="/analyze" className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm hover:shadow-md transition-shadow">
             <ArrowLeft className="w-4 h-4 text-gray-600" />
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900">你的专属肌肤报告</h1>
             {weather && (
               <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
@@ -239,7 +274,37 @@ export default function ResultsPage() {
               </p>
             )}
           </div>
+          {/* Save button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu((v) => !v)}
+              disabled={!!saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-stone-50 hover:shadow-sm disabled:opacity-50 transition-all"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {saving === "pdf" ? "生成中..." : saving === "image" ? "截图中..." : "保存报告"}
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1.5 w-40 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden z-10">
+                <button
+                  onClick={saveAsPDF}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-stone-50 transition-colors"
+                >
+                  <FileText className="w-4 h-4 text-gray-400" /> 保存为 PDF
+                </button>
+                <button
+                  onClick={saveAsImage}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-stone-50 transition-colors border-t border-gray-50"
+                >
+                  <FileImage className="w-4 h-4 text-gray-400" /> 保存为图片
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Report content */}
+        <div ref={reportRef} className="space-y-6">
 
         {/* Skin Analysis */}
         <div className="relative overflow-hidden rounded-3xl border border-stone-100 bg-white p-6 shadow-sm">
@@ -394,7 +459,7 @@ export default function ResultsPage() {
           </div>
         )}
 
-        <div className="text-center pb-8">
+        <div className="text-center pb-8 no-print">
           <Link
             href="/analyze"
             className="inline-flex items-center gap-2 text-sm text-rose-500 hover:text-rose-600 font-medium"
@@ -402,6 +467,7 @@ export default function ResultsPage() {
             <ArrowLeft className="w-4 h-4" /> 重新检测
           </Link>
         </div>
+        </div>{/* end reportRef */}
       </div>
     </main>
   );
