@@ -494,6 +494,15 @@ export default function AnalyzePage() {
                 </div>
               </div>
 
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0">⚠️</span>
+                  <div>
+                    <p>{error}</p>
+                    <p className="mt-1 text-xs text-red-500">点击「开始扫描」可重新采集。</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
