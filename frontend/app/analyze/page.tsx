@@ -250,12 +250,12 @@ export default function AnalyzePage() {
       setScanProgress(100);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
       update({
+        step: 2,
         scanImages: best.map((capture) => capture.file),
         scanPreviews: best.map((capture) => capture.preview),
       });
       setScanCompleted(true);
       scanSucceeded = true;
-      await new Promise((resolve) => setTimeout(resolve, 900));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限后重试");
     } finally {
