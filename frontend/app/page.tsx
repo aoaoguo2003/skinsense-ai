@@ -73,7 +73,7 @@ export default function HomePage() {
         {features.map((f, i) => (
           <div
             key={i}
-            className="bg-gradient-to-br from-stone-50 to-stone-200 border border-stone-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
+            className="bg-gradient-to-br from-stone-200 to-stone-300 border border-stone-300 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
           >
             <div className="w-12 h-12 bg-stone-100 rounded-xl flex items-center justify-center text-stone-600 mb-4">
               {f.icon}
