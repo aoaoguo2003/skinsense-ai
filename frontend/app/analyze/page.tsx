@@ -43,6 +43,7 @@ export default function AnalyzePage() {
   const [error, setError] = useState("");
   const [gpsLocating, setGpsLocating] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [scanCompleted, setScanCompleted] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanInstruction, setScanInstruction] = useState("请正对镜头");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -179,6 +180,7 @@ export default function AnalyzePage() {
     if (loading || scanning) return;
     let scanSucceeded = false;
     setError("");
+    setScanCompleted(false);
     setScanProgress(0);
     setScanInstruction("请正对镜头");
 
@@ -251,13 +253,17 @@ export default function AnalyzePage() {
         scanImages: best.map((capture) => capture.file),
         scanPreviews: best.map((capture) => capture.preview),
       });
+      setScanCompleted(true);
       scanSucceeded = true;
       await new Promise((resolve) => setTimeout(resolve, 900));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限后重试");
     } finally {
       stopCamera();
-      if (!scanSucceeded) setScanProgress(0);
+      if (!scanSucceeded) {
+        setScanCompleted(false);
+        setScanProgress(0);
+      }
     }
   };
 
@@ -312,7 +318,7 @@ export default function AnalyzePage() {
     progress < 55 ? "正在制定护肤方案..." :
     progress < 80 ? "正在筛选产品推荐..." :
     "即将完成...";
-  const scanComplete = form.scanImages.length >= 3;
+  const scanComplete = scanCompleted || form.scanImages.length >= 3;
 
   const canNext = () => {
     if (form.step === 1) return scanComplete;
@@ -412,8 +418,8 @@ export default function AnalyzePage() {
                         <div className="absolute right-8 top-8 h-16 w-16 border-r-2 border-t-2 border-sky-300" />
                         <div className="absolute left-8 bottom-8 h-16 w-16 border-l-2 border-b-2 border-sky-300" />
                         <div className="absolute right-8 bottom-8 h-16 w-16 border-r-2 border-b-2 border-sky-300" />
-                        <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100/60 shadow-[0_0_70px_rgba(56,189,248,0.45)]" />
-                        <div className="absolute left-1/2 top-1/2 h-[64vh] w-[44vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/15" />
+                        <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100/35 shadow-[0_0_44px_rgba(56,189,248,0.28)]" />
+                        <div className="absolute left-1/2 top-1/2 h-[64vh] w-[44vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/10" />
                         <div
                           className="absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-200 to-transparent shadow-[0_0_28px_rgba(34,211,238,0.95)] transition-all duration-300"
                           style={{ top: `${18 + scanProgress * 0.64}%` }}
@@ -430,7 +436,10 @@ export default function AnalyzePage() {
                     {!scanning && (
                       <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.18),transparent_38%),linear-gradient(135deg,#020617,#082f49_52%,#0f172a)]">
                         <div className="absolute inset-0 bg-[linear-gradient(rgba(125,211,252,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.14)_1px,transparent_1px)] bg-[size:32px_32px]" />
-                        <div className="absolute left-1/2 top-1/2 h-[70%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-100/35 shadow-[0_0_48px_rgba(56,189,248,0.25)]" />
+                        <div className="absolute left-1/2 top-1/2 h-[70%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-200/5 shadow-[0_0_38px_rgba(56,189,248,0.18)]" />
+                        <div className="absolute left-1/2 top-1/2 h-px w-[56%] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-100/60 to-transparent" />
+                        <div className="absolute left-1/2 top-[44%] h-px w-[42%] -translate-x-1/2 bg-gradient-to-r from-transparent via-sky-200/35 to-transparent" />
+                        <div className="absolute left-1/2 top-[56%] h-px w-[42%] -translate-x-1/2 bg-gradient-to-r from-transparent via-sky-200/35 to-transparent" />
                         <div className="absolute left-8 top-8 h-12 w-12 border-l-2 border-t-2 border-sky-300/70" />
                         <div className="absolute right-8 top-8 h-12 w-12 border-r-2 border-t-2 border-sky-300/70" />
                         <div className="absolute left-8 bottom-8 h-12 w-12 border-l-2 border-b-2 border-sky-300/70" />
