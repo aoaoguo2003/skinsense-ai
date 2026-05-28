@@ -429,7 +429,7 @@ export default function AnalyzePage() {
           </span>
         </div>
 
-        <div className="rounded-3xl border border-white/70 bg-white/88 p-6 shadow-2xl shadow-stone-300/55 backdrop-blur md:p-8">
+        <div className={`rounded-3xl p-6 md:p-8 transition-all ${form.step === 1 ? "" : "border border-white/70 bg-white/88 shadow-2xl shadow-stone-300/55 backdrop-blur"}`}>
 
           {/* Step 1: Face scan */}
           {form.step === 1 && (
