@@ -43,6 +43,7 @@ export default function AnalyzePage() {
   const [gpsLocating, setGpsLocating] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanInstruction, setScanInstruction] = useState("请正对镜头");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   const [form, setForm] = useState<FormState>(() => {
@@ -141,6 +142,7 @@ export default function AnalyzePage() {
     if (loading || scanning) return;
     setError("");
     setScanProgress(0);
+    setScanInstruction("请正对镜头");
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -160,27 +162,50 @@ export default function AnalyzePage() {
         await video.play();
       }
 
-      const captures: ScanCapture[] = [];
-      const totalFrames = 12;
-      for (let i = 0; i < totalFrames; i += 1) {
-        await new Promise((resolve) => setTimeout(resolve, i === 0 ? 500 : 220));
-        const capture = await captureFrame();
-        if (capture) captures.push(capture);
-        setScanProgress(Math.round(((i + 1) / totalFrames) * 100));
+      const scanPhases = [
+        { label: "请正对镜头", minMs: 2200, maxMs: 5200 },
+        { label: "请缓慢向左转头", minMs: 2800, maxMs: 6200 },
+        { label: "请缓慢向右转头", minMs: 2800, maxMs: 6200 },
+      ];
+      const clearFrameScore = 0.42;
+      const best: ScanCapture[] = [];
+
+      for (let phaseIndex = 0; phaseIndex < scanPhases.length; phaseIndex += 1) {
+        const phase = scanPhases[phaseIndex];
+        const phaseCaptures: ScanCapture[] = [];
+        const startedAt = Date.now();
+        setScanInstruction(phase.label);
+
+        while (Date.now() - startedAt < phase.maxMs) {
+          await new Promise((resolve) => setTimeout(resolve, 360));
+          const capture = await captureFrame();
+          if (capture) phaseCaptures.push(capture);
+
+          const elapsed = Date.now() - startedAt;
+          const phaseBase = (phaseIndex / scanPhases.length) * 100;
+          const phaseProgress = Math.min(elapsed / phase.maxMs, 1) * (100 / scanPhases.length);
+          setScanProgress(Math.min(99, Math.round(phaseBase + phaseProgress)));
+
+          const hasClearFrame =
+            elapsed >= phase.minMs &&
+            phaseCaptures.some((item) => item.score >= clearFrameScore);
+          if (hasClearFrame) break;
+        }
+
+        const phaseBest = phaseCaptures.sort((a, b) => b.score - a.score)[0];
+        if (!phaseBest || phaseBest.score < clearFrameScore) {
+          phaseCaptures.forEach((capture) => URL.revokeObjectURL(capture.preview));
+          throw new Error(`${phase.label}时画面不够清晰，请调整光线并保持动作稳定后重试`);
+        }
+
+        best.push(phaseBest);
+        phaseCaptures
+          .filter((capture) => capture !== phaseBest)
+          .forEach((capture) => URL.revokeObjectURL(capture.preview));
       }
 
-      const best = captures
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
-
-      captures
-        .filter((capture) => !best.includes(capture))
-        .forEach((capture) => URL.revokeObjectURL(capture.preview));
-
-      if (best.length === 0) {
-        throw new Error("未能采集到清晰画面，请调整光线后重试");
-      }
-
+      setScanInstruction("采集完成");
+      setScanProgress(100);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
       update({
         scanImages: best.map((capture) => capture.file),
@@ -245,12 +270,6 @@ export default function AnalyzePage() {
     progress < 55 ? "正在制定护肤方案..." :
     progress < 80 ? "正在筛选产品推荐..." :
     "即将完成...";
-
-  const faceScanInstruction =
-    scanProgress < 35 ? "请正对镜头" :
-    scanProgress < 70 ? "请缓慢向左转头" :
-    scanProgress < 95 ? "请缓慢向右转头" :
-    "采集完成";
 
   const canNext = () => {
     if (form.step === 1) return true;
@@ -351,7 +370,7 @@ export default function AnalyzePage() {
                           SKINSCAN ACTIVE
                         </div>
                         <div className="absolute left-1/2 top-[18%] -translate-x-1/2 text-center">
-                          <p className="text-2xl font-semibold text-white drop-shadow">{faceScanInstruction}</p>
+                          <p className="text-2xl font-semibold text-white drop-shadow">{scanInstruction}</p>
                           <p className="mt-2 text-sm text-white/70">保持面部在轮廓范围内</p>
                         </div>
                       </>
@@ -365,7 +384,7 @@ export default function AnalyzePage() {
                     {scanning && (
                       <div className="absolute inset-x-6 bottom-8">
                         <div className="flex justify-between text-sm text-white mb-2">
-                          <span>{faceScanInstruction}</span>
+                          <span>{scanInstruction}</span>
                           <span>{scanProgress}%</span>
                         </div>
                         <div className="h-2 rounded-full bg-white/20 overflow-hidden">
