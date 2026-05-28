@@ -243,13 +243,15 @@ export default function AnalyzePage() {
           .forEach((capture) => URL.revokeObjectURL(capture.preview));
       }
 
-      setScanInstruction("采集完成");
+      setScanInstruction("采集完成 ✓");
       setScanProgress(100);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
       update({
         scanImages: best.map((capture) => capture.file),
         scanPreviews: best.map((capture) => capture.preview),
       });
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      update({ step: 2 });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限后重试");
     } finally {
