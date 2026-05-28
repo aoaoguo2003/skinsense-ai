@@ -353,21 +353,21 @@ export default function AnalyzePage() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 py-12 px-4">
+    <main className="min-h-screen bg-white py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
           {[1, 2].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                form.step >= s ? "bg-white text-neutral-900" : "bg-white/10 text-white/40 border border-white/15"
+                form.step >= s ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-400 border border-stone-200"
               }`}>
                 {s}
               </div>
-              {s < 2 && <div className={`flex-1 h-1 w-16 rounded ${form.step > s ? "bg-white/60" : "bg-white/15"}`} />}
+              {s < 2 && <div className={`flex-1 h-1 w-16 rounded ${form.step > s ? "bg-stone-500" : "bg-stone-200"}`} />}
             </div>
           ))}
-          <span className="ml-auto text-sm text-white/40">
+          <span className="ml-auto text-sm text-stone-400">
             {form.step === 1 ? "面部采集" : "偏好"}
           </span>
         </div>
