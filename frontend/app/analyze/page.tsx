@@ -7,7 +7,6 @@ import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
 
 const SKIN_CONCERNS = ["痘痘/粉刺", "黑头", "毛孔粗大", "细纹/皱纹", "色斑/暗沉", "红血丝", "泛红敏感", "黑眼圈", "干燥脱皮", "出油过多"];
-const AGE_RANGES = ["18岁以下", "18-24岁", "25-34岁", "35-44岁", "45-54岁", "55岁以上"];
 const BUDGET_VALUES = [
   ...Array.from({ length: 41 }, (_, i) => i * 50),       // 0, 50, 100, ..., 2000
   ...Array.from({ length: 8 }, (_, i) => 3000 + i * 1000), // 3000, 4000, ..., 10000
@@ -17,8 +16,6 @@ const FRAGRANCES = ["偏好有香味", "偏好无香", "无所谓"];
 interface FormState {
   step: number;
   skinConcerns: string[];
-  ageRange: string;
-  gender: string;
   budgetMin: number;
   budgetMax: number;
   texture: string;
@@ -69,8 +66,6 @@ export default function AnalyzePage() {
     return {
       step: 1,
       skinConcerns: [],
-      ageRange: "",
-      gender: "",
       budgetMin: 0,
       budgetMax: 500,
       texture: "",
@@ -312,8 +307,8 @@ export default function AnalyzePage() {
       );
       const questionnaire: Questionnaire = {
         skin_concerns: skinConcerns,
-        age_range: form.ageRange || "未指定",
-        gender: form.gender || "未指定",
+        age_range: "由AI根据面部图像辅助判断，用户未手动填写",
+        gender: "由AI根据面部图像辅助判断，用户未手动填写",
         budget: `¥${form.budgetMin}-${form.budgetMax >= 10000 ? "10000以上" : form.budgetMax}（每件）`,
         preferred_texture: form.texture || "无偏好",
         avoid_ingredients: form.avoidIngredients || "无",
@@ -358,47 +353,128 @@ export default function AnalyzePage() {
             </div>
           ))}
           <span className="ml-auto text-sm text-gray-500">
-            {form.step === 1 ? "基本信息" : form.step === 2 ? "皮肤关注" : "照片与位置"}
+            {form.step === 1 ? "面部采集" : form.step === 2 ? "皮肤关注" : "位置"}
           </span>
         </div>
 
         <div className="bg-white/80 backdrop-blur rounded-3xl shadow-lg p-8">
 
-          {/* Step 1: Basic info */}
+          {/* Step 1: Face scan */}
           {form.step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">基本信息</h2>
-              <p className="text-sm text-gray-500 -mt-2">肤质与敏感度将由 AI 从照片自动识别</p>
+              <h2 className="text-2xl font-bold text-gray-900">面部采集</h2>
+              <p className="text-sm text-gray-500 -mt-2">保持正对镜头，使用自然、稳定的光线。</p>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">年龄段</label>
-                <select
-                  value={form.ageRange}
-                  onChange={(e) => update({ ageRange: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-                >
-                  <option value="">请选择（可选）</option>
-                  {AGE_RANGES.map((a) => <option key={a} value={a}>{a}</option>)}
-                </select>
+                <div className="rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
+                  <div className={`relative overflow-hidden bg-gray-950 flex items-center justify-center transition-all ${
+                    scanning
+                      ? "fixed inset-0 z-50 rounded-none aspect-auto"
+                      : "rounded-xl aspect-video"
+                  }`}>
+                    <video
+                      ref={videoRef}
+                      className={`h-full w-full object-cover scale-x-[-1] ${scanning ? "block" : "hidden"}`}
+                      muted
+                      playsInline
+                    />
+                    {!scanning && (
+                      <div className="text-center px-6">
+                        <Camera className="w-9 h-9 text-rose-300 mx-auto mb-3" />
+                        <p className="text-sm text-white font-medium">准备好后开始采集</p>
+                      </div>
+                    )}
+                    {scanning && (
+                      <div className="absolute inset-x-6 bottom-8">
+                        <div className="flex justify-between text-sm text-white mb-2">
+                          <span>采集中，请保持正对镜头</span>
+                          <span>{scanProgress}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-white/20 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-rose-300 to-fuchsia-300 transition-all"
+                            style={{ width: `${scanProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <canvas ref={canvasRef} className="hidden" />
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={startFaceScan}
+                      disabled={loading || scanning}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white text-sm font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
+                    >
+                      {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                      {scanning ? "采集中..." : "开始采集"}
+                    </button>
+                    {form.scanPreviews.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
+                          update({ scanImages: [], scanPreviews: [] });
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-rose-300"
+                      >
+                        <X className="w-4 h-4" />
+                        重新采集
+                      </button>
+                    )}
+                  </div>
+
+                  {form.scanPreviews.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-medium text-gray-500 mb-2">已完成采集</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {form.scanPreviews.map((preview, i) => (
+                          <div key={preview} className="relative aspect-square overflow-hidden rounded-xl bg-white">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={preview} alt={`scan frame ${i + 1}`} className="h-full w-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">性别（可选）</label>
-                <div className="flex gap-2">
-                  {["女", "男", "不透露"].map((g) => (
-                    <button
-                      key={g}
-                      onClick={() => update({ gender: g })}
-                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-                        form.gender === g
-                          ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
-                          : "border-gray-200 text-gray-700 hover:border-rose-300"
-                      }`}
-                    >
-                      {g}
-                    </button>
-                  ))}
+                <label className="block text-sm font-medium text-gray-700 mb-3">无法使用摄像头时，可上传照片</label>
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={() => fileRef.current?.click()}
+                  className="border-2 border-dashed border-rose-200 rounded-2xl p-6 text-center cursor-pointer hover:border-rose-400 hover:bg-rose-50/50 transition-all"
+                >
+                  {form.imagePreview ? (
+                    <div className="relative inline-block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={form.imagePreview} alt="preview" className="h-32 w-32 object-cover rounded-xl mx-auto" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); update({ image: null, imagePreview: null }); }}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center hover:bg-rose-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-7 h-7 text-rose-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">拖拽图片到此处，或点击上传</p>
+                    </>
+                  )}
                 </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleImage(e.target.files[0])}
+                />
               </div>
             </div>
           )}
@@ -566,132 +642,10 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {/* Step 3: Photo + Location */}
+          {/* Step 3: Location */}
           {form.step === 3 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">照片与位置（可选）</h2>
-
-              {/* Face scan */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">实时扫脸采集（推荐）</label>
-                <div className="rounded-2xl border border-rose-100 bg-rose-50/40 p-4">
-                  <div className="relative overflow-hidden rounded-xl bg-gray-900 aspect-video flex items-center justify-center">
-                    <video
-                      ref={videoRef}
-                      className={`h-full w-full object-cover scale-x-[-1] ${scanning ? "block" : "hidden"}`}
-                      muted
-                      playsInline
-                    />
-                    {!scanning && (
-                      <div className="text-center px-6">
-                        <Camera className="w-9 h-9 text-rose-300 mx-auto mb-3" />
-                        <p className="text-sm text-white font-medium">自动采集多张脸部画面</p>
-                        <p className="text-xs text-gray-300 mt-1">系统会挑选光线和清晰度最合适的 3 张用于综合分析</p>
-                      </div>
-                    )}
-                    {scanning && (
-                      <div className="absolute inset-x-6 bottom-5">
-                        <div className="flex justify-between text-xs text-white mb-1.5">
-                          <span>正在扫描，请正对镜头并保持光线稳定</span>
-                          <span>{scanProgress}%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-white/20 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-rose-300 to-fuchsia-300 transition-all"
-                            style={{ width: `${scanProgress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <canvas ref={canvasRef} className="hidden" />
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={startFaceScan}
-                      disabled={loading || scanning}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white text-sm font-semibold hover:shadow-lg disabled:opacity-50 transition-all"
-                    >
-                      {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                      {scanning ? "扫描中..." : "开始扫脸"}
-                    </button>
-                    {cameraStream && (
-                      <button
-                        type="button"
-                        onClick={stopCamera}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-rose-300"
-                      >
-                        <X className="w-4 h-4" />
-                        停止
-                      </button>
-                    )}
-                  </div>
-
-                  {form.scanPreviews.length > 0 && (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-medium text-gray-500">已选出 {form.scanPreviews.length} 张最佳画面</p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
-                            update({ scanImages: [], scanPreviews: [] });
-                          }}
-                          className="text-xs text-rose-500 hover:text-rose-600"
-                        >
-                          清除
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {form.scanPreviews.map((preview, i) => (
-                          <div key={preview} className="relative aspect-square overflow-hidden rounded-xl bg-white">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={preview} alt={`scan frame ${i + 1}`} className="h-full w-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Image upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">上传面部照片（提升分析精准度）</label>
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                  onClick={() => fileRef.current?.click()}
-                  className="border-2 border-dashed border-rose-200 rounded-2xl p-8 text-center cursor-pointer hover:border-rose-400 hover:bg-rose-50/50 transition-all"
-                >
-                  {form.imagePreview ? (
-                    <div className="relative inline-block">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={form.imagePreview} alt="preview" className="h-40 w-40 object-cover rounded-xl mx-auto" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); update({ image: null, imagePreview: null }); }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center hover:bg-rose-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="w-8 h-8 text-rose-300 mx-auto mb-3" />
-                      <p className="text-sm text-gray-500">拖拽图片到此处，或点击上传</p>
-                      <p className="text-xs text-gray-400 mt-1">支持 JPG, PNG, WebP · 最大 10MB</p>
-                    </>
-                  )}
-                </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && handleImage(e.target.files[0])}
-                />
-              </div>
+              <h2 className="text-2xl font-bold text-gray-900">位置</h2>
 
               {/* Location */}
               <div>
