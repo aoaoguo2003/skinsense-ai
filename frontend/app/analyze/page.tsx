@@ -206,8 +206,8 @@ export default function AnalyzePage() {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
         },
         audio: false,
       });
@@ -416,7 +416,7 @@ export default function AnalyzePage() {
                   }`}>
                     <video
                       ref={videoRef}
-                      className={`h-full w-full object-cover scale-x-[-1] ${scanning ? "block" : "hidden"}`}
+                      className={`absolute inset-0 h-full w-full object-cover scale-x-[-1] ${scanning ? "block" : "hidden"}`}
                       muted
                       playsInline
                     />
