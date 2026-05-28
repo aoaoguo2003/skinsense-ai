@@ -6,7 +6,6 @@ import { Camera, X, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-re
 import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
 
-const SKIN_CONCERNS = ["痘痘/粉刺", "黑头", "毛孔粗大", "细纹/皱纹", "色斑/暗沉", "红血丝", "泛红敏感", "黑眼圈", "干燥脱皮", "出油过多"];
 const BUDGET_VALUES = [
   ...Array.from({ length: 41 }, (_, i) => i * 50),       // 0, 50, 100, ..., 2000
   ...Array.from({ length: 8 }, (_, i) => 3000 + i * 1000), // 3000, 4000, ..., 10000
@@ -15,15 +14,11 @@ const TEXTURES = ["清爽水感", "轻薄乳液", "普通乳霜", "厚重滋润"
 const FRAGRANCES = ["偏好有香味", "偏好无香", "无所谓"];
 interface FormState {
   step: number;
-  skinConcerns: string[];
   budgetMin: number;
   budgetMax: number;
   texture: string;
   avoidIngredients: string;
   fragrance: string;
-  currentProducts: string[];
-  newProduct: string;
-  otherConcern: string;
   city: string;
   useGPS: boolean;
   latitude?: number;
@@ -62,15 +57,11 @@ export default function AnalyzePage() {
     }
     return {
       step: 1,
-      skinConcerns: [],
       budgetMin: 0,
       budgetMax: 500,
       texture: "",
       avoidIngredients: "",
       fragrance: "",
-      currentProducts: [],
-      newProduct: "",
-      otherConcern: "",
       city: "",
       useGPS: false,
       scanImages: [],
@@ -88,23 +79,6 @@ export default function AnalyzePage() {
     } catch {}
     return next;
   }), []);
-
-  const toggleConcern = (c: string) => {
-    update({
-      skinConcerns: form.skinConcerns.includes(c)
-        ? form.skinConcerns.filter((x) => x !== c)
-        : [...form.skinConcerns, c],
-    });
-  };
-
-  const addProduct = () => {
-    const p = form.newProduct.trim();
-    if (p && !form.currentProducts.includes(p)) {
-      update({ currentProducts: [...form.currentProducts, p], newProduct: "" });
-    }
-  };
-
-  const removeProduct = (p: string) => update({ currentProducts: form.currentProducts.filter((x) => x !== p) });
 
   const scoreFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const { data } = ctx.getImageData(0, 0, width, height);
@@ -243,7 +217,10 @@ export default function AnalyzePage() {
         } catch {}
         setGpsLocating(false);
       },
-      () => { update({ useGPS: false }); setGpsLocating(false); }
+      () => {
+        update({ useGPS: false });
+        setGpsLocating(false);
+      }
     );
   };
 
@@ -271,7 +248,6 @@ export default function AnalyzePage() {
 
   const canNext = () => {
     if (form.step === 1) return true;
-    if (form.step === 2) return form.skinConcerns.length > 0;
     return true;
   };
 
@@ -280,11 +256,8 @@ export default function AnalyzePage() {
     setLoading(true);
     setError("");
     try {
-      const skinConcerns = form.skinConcerns.map((c) =>
-        c === "其他" && form.otherConcern.trim() ? `其他：${form.otherConcern.trim()}` : c
-      );
       const questionnaire: Questionnaire = {
-        skin_concerns: skinConcerns,
+        skin_concerns: ["由AI根据面部采集自动识别"],
         age_range: "由AI根据面部图像辅助判断，用户未手动填写",
         gender: "由AI根据面部图像辅助判断，用户未手动填写",
         budget: `¥${form.budgetMin}-${form.budgetMax >= 10000 ? "10000以上" : form.budgetMax}（每件）`,
@@ -296,7 +269,6 @@ export default function AnalyzePage() {
 
       const result = await analyzeSkin({
         questionnaire,
-        currentProducts: form.currentProducts,
         city: form.useGPS ? undefined : form.city || undefined,
         latitude: form.useGPS ? form.latitude : undefined,
         longitude: form.useGPS ? form.longitude : undefined,
@@ -319,18 +291,18 @@ export default function AnalyzePage() {
       <div className="max-w-2xl mx-auto">
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
-          {[1, 2, 3].map((s) => (
+          {[1, 2].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
                 form.step >= s ? "bg-gradient-to-br from-rose-500 to-fuchsia-500 text-white" : "bg-white text-gray-400 border"
               }`}>
                 {s}
               </div>
-              {s < 3 && <div className={`flex-1 h-1 w-16 rounded ${form.step > s ? "bg-rose-300" : "bg-gray-200"}`} />}
+              {s < 2 && <div className={`flex-1 h-1 w-16 rounded ${form.step > s ? "bg-rose-300" : "bg-gray-200"}`} />}
             </div>
           ))}
           <span className="ml-auto text-sm text-gray-500">
-            {form.step === 1 ? "面部采集" : form.step === 2 ? "皮肤关注" : "位置"}
+            {form.step === 1 ? "面部采集" : "偏好"}
           </span>
         </div>
 
@@ -422,48 +394,10 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {/* Step 2: Concerns + preferences */}
+          {/* Step 2: Preferences */}
           {form.step === 2 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">你的皮肤关注点</h2>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">皮肤问题（可多选）</label>
-                <div className="flex flex-wrap gap-2">
-                  {SKIN_CONCERNS.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => toggleConcern(c)}
-                      className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${
-                        form.skinConcerns.includes(c)
-                          ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
-                          : "border-gray-200 text-gray-700 hover:border-rose-300"
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => toggleConcern("其他")}
-                    className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${
-                      form.skinConcerns.includes("其他")
-                        ? "bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white border-transparent"
-                        : "border-gray-200 text-gray-700 hover:border-rose-300"
-                    }`}
-                  >
-                    其他
-                  </button>
-                </div>
-                {form.skinConcerns.includes("其他") && (
-                  <input
-                    type="text"
-                    value={form.otherConcern}
-                    onChange={(e) => update({ otherConcern: e.target.value })}
-                    placeholder="请描述你的皮肤问题..."
-                    className="mt-3 w-full border border-rose-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-                  />
-                )}
-              </div>
+              <h2 className="text-2xl font-bold text-gray-900">产品偏好</h2>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">预算范围（每件单品）</label>
@@ -562,37 +496,7 @@ export default function AnalyzePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">现在使用的产品（可选，用于检测成分冲突）</label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={form.newProduct}
-                    onChange={(e) => update({ newProduct: e.target.value })}
-                    onKeyDown={(e) => e.key === "Enter" && addProduct()}
-                    placeholder="输入产品名称后按 Enter 添加"
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {form.currentProducts.map((p) => (
-                    <span key={p} className="inline-flex items-center gap-1 bg-rose-50 border border-rose-200 text-rose-700 text-xs px-3 py-1 rounded-full">
-                      {p}
-                      <button onClick={() => removeProduct(p)} className="hover:text-rose-900"><X className="w-3 h-3" /></button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Location */}
-          {form.step === 3 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">位置</h2>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">所在城市（用于天气适配推荐）</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">所在城市</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -600,9 +504,10 @@ export default function AnalyzePage() {
                     onChange={(e) => update({ city: e.target.value, useGPS: false })}
                     placeholder="例如：北京、Shanghai、London..."
                     readOnly={gpsLocating}
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300 disabled:bg-gray-50"
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
                   />
                   <button
+                    type="button"
                     onClick={detectGPS}
                     disabled={gpsLocating}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
@@ -615,15 +520,6 @@ export default function AnalyzePage() {
                     {gpsLocating ? "定位中..." : form.useGPS ? "已定位" : "自动定位"}
                   </button>
                 </div>
-              </div>
-
-              {/* Summary */}
-              <div className="bg-rose-50 rounded-2xl p-4 text-sm text-gray-600 space-y-1">
-                <p><span className="font-medium">关注点：</span>{form.skinConcerns.join("、") || "—"}</p>
-                <p><span className="font-medium">预算：</span>¥{form.budgetMin} — {form.budgetMax >= 10000 ? "¥10000+" : `¥${form.budgetMax}`}</p>
-                {form.currentProducts.length > 0 && (
-                  <p><span className="font-medium">当前产品：</span>{form.currentProducts.join("、")}</p>
-                )}
               </div>
 
               {error && (
@@ -643,7 +539,7 @@ export default function AnalyzePage() {
               <ChevronLeft className="w-4 h-4" /> 上一步
             </button>
 
-            {form.step < 3 ? (
+            {form.step < 2 ? (
               <button
                 onClick={() => update({ step: form.step + 1 })}
                 disabled={!canNext()}

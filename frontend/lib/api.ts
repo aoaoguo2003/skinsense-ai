@@ -4,7 +4,6 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:800
 
 export async function analyzeSkin(params: {
   questionnaire: Questionnaire;
-  currentProducts?: string[];
   city?: string;
   latitude?: number;
   longitude?: number;
@@ -13,9 +12,6 @@ export async function analyzeSkin(params: {
   const form = new FormData();
   form.append("questionnaire", JSON.stringify(params.questionnaire));
 
-  if (params.currentProducts?.length) {
-    form.append("current_products", JSON.stringify(params.currentProducts));
-  }
   if (params.city) form.append("city", params.city);
   if (params.latitude != null) form.append("latitude", String(params.latitude));
   if (params.longitude != null) form.append("longitude", String(params.longitude));
