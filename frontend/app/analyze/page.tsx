@@ -438,8 +438,7 @@ export default function AnalyzePage() {
               <p className="text-sm text-gray-500 -mt-2">保持正对镜头，使用自然、稳定的光线。</p>
 
               <div>
-                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/80 p-4 shadow-inner">
-                  <div className="relative overflow-hidden rounded-xl aspect-video bg-neutral-950 flex items-center justify-center">
+                  <div className="relative overflow-hidden rounded-2xl aspect-video bg-neutral-950 flex items-center justify-center">
                     <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_center,rgba(251,191,36,0.1),transparent_40%),linear-gradient(135deg,#0a0a0a,#1a1200_52%,#0d0d0d)]">
                       <div className="absolute inset-0 bg-[linear-gradient(rgba(251,191,36,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(251,191,36,0.07)_1px,transparent_1px)] bg-[size:32px_32px]" />
                       <div className="absolute left-1/2 top-1/2 h-[70%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-300/5 shadow-[0_0_38px_rgba(251,191,36,0.15)]" />
@@ -476,8 +475,6 @@ export default function AnalyzePage() {
                       {scanning ? "扫描中..." : scanComplete ? "扫描完成" : "开始扫描"}
                     </button>
                   </div>
-
-                </div>
               </div>
 
               {error && (
