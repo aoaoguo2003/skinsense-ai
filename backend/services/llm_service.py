@@ -52,10 +52,8 @@ def _build_analysis_prompt(
     if current_products:
         parts.append("\n## User's Current Products\n" + "\n".join(f"- {p}" for p in current_products))
 
-    if image_count > 1:
-        parts.append(f"\n## Note\n{image_count} facial scan frames have been provided from the same session. Compare them together and base your visible-skin observations on consistent signals across frames, not one-off lighting artifacts.")
-    elif image_count == 1:
-        parts.append("\n## Note\nA facial photo has been provided. Analyze the visible skin condition, tone, texture, and any visible concerns from the image.")
+    if image_count > 0:
+        parts.append("\n## Note\nComprehensive facial scan data has been provided. Base your skin analysis on the overall scan results, focusing on consistent skin signals rather than any single-frame artifact.")
 
     parts.append("""
 ## Required Response Format (JSON)
