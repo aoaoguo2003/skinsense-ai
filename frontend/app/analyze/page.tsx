@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Camera, MapPin, ChevronRight, ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { analyzeSkin } from "@/lib/api";
@@ -88,20 +87,18 @@ export default function AnalyzePage() {
     const scanImages = captures.map((capture) => capture.file);
     const scanPreviews = captures.map((capture) => capture.preview);
 
-    flushSync(() => {
-      setForm((f) => {
-        const next = { ...f, step: 2, scanImages, scanPreviews };
-        try {
-          const { scanImages: _scanImages, scanPreviews: _scanPreviews, ...saveable } = next;
-          void _scanImages;
-          void _scanPreviews;
-          sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
-        } catch {}
-        return next;
-      });
-      setScanCompleted(true);
-      setScanning(false);
+    setForm((f) => {
+      const next = { ...f, step: 2, scanImages, scanPreviews };
+      try {
+        const { scanImages: _scanImages, scanPreviews: _scanPreviews, ...saveable } = next;
+        void _scanImages;
+        void _scanPreviews;
+        sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
+      } catch {}
+      return next;
     });
+    setScanCompleted(true);
+    setScanning(false);
   }, []);
 
   const scoreFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
