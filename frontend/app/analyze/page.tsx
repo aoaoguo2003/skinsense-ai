@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, X, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Camera, MapPin, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
 
@@ -31,6 +31,7 @@ interface ScanCapture {
   file: File;
   preview: string;
   score: number;
+  balance: number;
 }
 
 export default function AnalyzePage() {
@@ -44,7 +45,6 @@ export default function AnalyzePage() {
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanInstruction, setScanInstruction] = useState("请正对镜头");
-  const [completedScanPhases, setCompletedScanPhases] = useState(0);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   const [form, setForm] = useState<FormState>(() => {
@@ -85,22 +85,34 @@ export default function AnalyzePage() {
   const scoreFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const { data } = ctx.getImageData(0, 0, width, height);
     let brightness = 0;
+    let leftBrightness = 0;
+    let rightBrightness = 0;
     let contrast = 0;
     let previous = 0;
+    let samples = 0;
 
-    for (let i = 0; i < data.length; i += 16) {
-      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-      brightness += gray;
-      contrast += Math.abs(gray - previous);
-      previous = gray;
+    for (let y = 0; y < height; y += 8) {
+      for (let x = 0; x < width; x += 8) {
+        const i = (y * width + x) * 4;
+        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        brightness += gray;
+        if (x < width / 2) leftBrightness += gray;
+        else rightBrightness += gray;
+        contrast += Math.abs(gray - previous);
+        previous = gray;
+        samples += 1;
+      }
     }
 
-    const samples = data.length / 16;
     const avgBrightness = brightness / samples;
     const brightnessScore = 1 - Math.min(Math.abs(avgBrightness - 145) / 145, 1);
     const contrastScore = Math.min(contrast / samples / 28, 1);
+    const balance = (rightBrightness - leftBrightness) / Math.max(rightBrightness + leftBrightness, 1);
 
-    return brightnessScore * 0.65 + contrastScore * 0.35;
+    return {
+      score: brightnessScore * 0.65 + contrastScore * 0.35,
+      balance,
+    };
   };
 
   const captureFrame = async (): Promise<ScanCapture | null> => {
@@ -117,7 +129,7 @@ export default function AnalyzePage() {
     if (!ctx) return null;
 
     ctx.drawImage(video, 0, 0, width, height);
-    const score = scoreFrame(ctx, width, height);
+    const metrics = scoreFrame(ctx, width, height);
 
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
@@ -126,7 +138,7 @@ export default function AnalyzePage() {
           return;
         }
         const file = new File([blob], `face-scan-${Date.now()}.jpg`, { type: "image/jpeg" });
-        resolve({ file, preview: URL.createObjectURL(blob), score });
+        resolve({ file, preview: URL.createObjectURL(blob), ...metrics });
       }, "image/jpeg", 0.9);
     });
   };
@@ -139,12 +151,35 @@ export default function AnalyzePage() {
     setScanning(false);
   }, []);
 
+  const isValidScanPhase = (
+    capture: ScanCapture,
+    phaseIndex: number,
+    acceptedCaptures: ScanCapture[],
+    clearFrameScore: number,
+  ) => {
+    if (capture.score < clearFrameScore) return false;
+    if (phaseIndex === 0) return true;
+
+    const frontCapture = acceptedCaptures[0];
+    if (!frontCapture) return false;
+
+    const sideDelta = Math.abs(capture.balance - frontCapture.balance);
+    if (sideDelta < 0.018) return false;
+
+    if (phaseIndex === 2) {
+      const leftCapture = acceptedCaptures[1];
+      if (!leftCapture) return false;
+      return Math.abs(capture.balance - leftCapture.balance) >= 0.025;
+    }
+
+    return true;
+  };
+
   const startFaceScan = async () => {
     if (loading || scanning) return;
     setError("");
     setScanProgress(0);
     setScanInstruction("请正对镜头");
-    setCompletedScanPhases(0);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -165,9 +200,9 @@ export default function AnalyzePage() {
       }
 
       const scanPhases = [
-        { label: "请正对镜头", minMs: 2200, maxMs: 5200 },
-        { label: "请缓慢向左转头", minMs: 2800, maxMs: 6200 },
-        { label: "请缓慢向右转头", minMs: 2800, maxMs: 6200 },
+        { label: "请正对镜头", failLabel: "正脸", minMs: 2200, maxMs: 5200 },
+        { label: "请缓慢向左转头", failLabel: "左脸", minMs: 3200, maxMs: 7600 },
+        { label: "请缓慢向右转头", failLabel: "右脸", minMs: 3200, maxMs: 7600 },
       ];
       const clearFrameScore = 0.42;
       const best: ScanCapture[] = [];
@@ -190,18 +225,19 @@ export default function AnalyzePage() {
 
           const hasClearFrame =
             elapsed >= phase.minMs &&
-            phaseCaptures.some((item) => item.score >= clearFrameScore);
+            phaseCaptures.some((item) => isValidScanPhase(item, phaseIndex, best, clearFrameScore));
           if (hasClearFrame) break;
         }
 
-        const phaseBest = phaseCaptures.sort((a, b) => b.score - a.score)[0];
-        if (!phaseBest || phaseBest.score < clearFrameScore) {
+        const phaseBest = phaseCaptures
+          .filter((capture) => isValidScanPhase(capture, phaseIndex, best, clearFrameScore))
+          .sort((a, b) => b.score - a.score)[0];
+        if (!phaseBest) {
           phaseCaptures.forEach((capture) => URL.revokeObjectURL(capture.preview));
-          throw new Error(`${phase.label}时画面不够清晰，请调整光线并保持动作稳定后重试`);
+          throw new Error(`${phase.failLabel}没有扫描清楚，请转头幅度稍大一些并保持稳定后重试`);
         }
 
         best.push(phaseBest);
-        setCompletedScanPhases(phaseIndex + 1);
         phaseCaptures
           .filter((capture) => capture !== phaseBest)
           .forEach((capture) => URL.revokeObjectURL(capture.preview));
@@ -219,7 +255,6 @@ export default function AnalyzePage() {
     } finally {
       stopCamera();
       setScanProgress(0);
-      setCompletedScanPhases(0);
     }
   };
 
@@ -385,30 +420,6 @@ export default function AnalyzePage() {
                         <p className="text-sm text-white font-medium">准备好后开始扫描</p>
                       </div>
                     )}
-                    {scanning && (
-                      <div className="absolute inset-x-6 bottom-8">
-                        <div className="grid grid-cols-3 gap-3">
-                          {["正脸", "左脸", "右脸"].map((label, index) => {
-                            const done = completedScanPhases > index;
-                            const active = completedScanPhases === index;
-                            return (
-                              <div
-                                key={label}
-                                className={`rounded-xl border px-3 py-2 text-center text-xs font-semibold backdrop-blur ${
-                                  done
-                                    ? "border-cyan-200/50 bg-cyan-300/20 text-cyan-100"
-                                    : active
-                                      ? "border-sky-300/50 bg-sky-500/20 text-sky-100"
-                                      : "border-white/15 bg-black/20 text-white/45"
-                                }`}
-                              >
-                                {label}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
                   </div>
                   <canvas ref={canvasRef} className="hidden" />
 
@@ -422,28 +433,8 @@ export default function AnalyzePage() {
                       {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                       {scanning ? "扫描中..." : "开始扫描"}
                     </button>
-                    {form.scanPreviews.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
-                          update({ scanImages: [], scanPreviews: [] });
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-rose-300"
-                      >
-                        <X className="w-4 h-4" />
-                        重新扫描
-                      </button>
-                    )}
                   </div>
 
-                  {form.scanPreviews.length > 0 && (
-                    <div className="mt-4 flex justify-center">
-                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700">
-                        面部扫描已完成
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
