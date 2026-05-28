@@ -561,7 +561,7 @@ export default function AnalyzePage() {
                     <select
                       value={form.texture}
                       onChange={(e) => update({ texture: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                      className="w-full border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                     >
                       <option value="">请选择</option>
                       {TEXTURES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -572,7 +572,7 @@ export default function AnalyzePage() {
                     <select
                       value={form.fragrance}
                       onChange={(e) => update({ fragrance: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                      className="w-full border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                     >
                       <option value="">请选择</option>
                       {FRAGRANCES.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -587,7 +587,7 @@ export default function AnalyzePage() {
                     value={form.avoidIngredients}
                     onChange={(e) => update({ avoidIngredients: e.target.value })}
                     placeholder="例如：酒精、香料、矿油..."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                    className="w-full border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                   />
                 </div>
 
@@ -600,7 +600,7 @@ export default function AnalyzePage() {
                       onChange={(e) => update({ city: e.target.value, useGPS: false })}
                       placeholder="例如：北京、Shanghai、London..."
                       readOnly={gpsLocating}
-                      className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                      className="flex-1 border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                     />
                     <button
                       type="button"
@@ -609,7 +609,7 @@ export default function AnalyzePage() {
                       className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-medium transition-all disabled:opacity-60 ${
                         form.useGPS
                           ? "bg-white text-gray-900 border border-gray-900"
-                          : "border-gray-200 text-gray-700 hover:border-gray-400"
+                          : "border-stone-400 text-gray-700 hover:border-stone-600"
                       }`}
                     >
                       <MapPin className="w-4 h-4" />
