@@ -372,13 +372,12 @@ export default function AnalyzePage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-stone-100 px-4 py-12">
+    <main className="relative min-h-screen overflow-hidden bg-stone-200 px-4 py-12">
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.08]"
+        className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/report-bg.jpg')" }}
       />
-      <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.88),rgba(245,245,244,0.76)_42%,rgba(231,229,228,0.88))]" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(120,113,108,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(120,113,108,0.055)_1px,transparent_1px)] bg-[size:42px_42px]" />
+      <div className="absolute inset-0 bg-white/55" />
 
       {/* ── Full-screen scan overlay ── outside backdrop-blur card to avoid containing-block trap */}
       <video
