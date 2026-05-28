@@ -434,8 +434,7 @@ export default function AnalyzePage() {
                         <div className="absolute left-1/2 top-1/2 h-[58vh] w-[38vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100/35 shadow-[0_0_44px_rgba(56,189,248,0.28)]" />
                         <div className="absolute left-1/2 top-1/2 h-[64vh] w-[44vh] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/10" />
                         <div
-                          className="absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-200 to-transparent shadow-[0_0_28px_rgba(34,211,238,0.95)] transition-all duration-300"
-                          style={{ top: `${18 + scanProgress * 0.64}%` }}
+                          className="animate-scan-sweep absolute left-1/2 h-[2px] w-[42vh] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-200 to-transparent shadow-[0_0_28px_rgba(34,211,238,0.95)]"
                         />
                         <div className="absolute left-1/2 top-8 -translate-x-1/2 rounded-full border border-sky-200/30 bg-sky-950/35 px-5 py-2 text-xs font-medium tracking-[0.25em] text-sky-100 backdrop-blur">
                           SKINSCAN ACTIVE
