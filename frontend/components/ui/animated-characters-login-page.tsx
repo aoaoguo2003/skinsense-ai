@@ -316,6 +316,9 @@ function LoginPage() {
     // Mock authentication — TODO: replace with real backend auth.
     // Demo credentials: demo@skinsense.ai / 1234
     if (email === "demo@skinsense.ai" && password === "1234") {
+      try {
+        localStorage.setItem("skinsense_auth", "1");
+      } catch {}
       router.push("/");
       return;
     } else {

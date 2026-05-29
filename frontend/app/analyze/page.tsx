@@ -319,6 +319,12 @@ export default function AnalyzePage() {
   }, [loading]);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem("skinsense_auth") !== "1") {
+      router.replace("/login");
+    }
+  }, [router]);
+
+  useEffect(() => {
     const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
     if (nav?.type === "reload") {
       router.replace("/");

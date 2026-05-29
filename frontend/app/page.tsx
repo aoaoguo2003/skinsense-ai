@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Sparkles, Camera, FlaskConical, CloudSun, ArrowRight } from "lucide-react";
 
 const features = [
@@ -26,6 +27,14 @@ const features = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+
+  const handleStart = () => {
+    const authed =
+      typeof window !== "undefined" && localStorage.getItem("skinsense_auth") === "1";
+    router.push(authed ? "/analyze" : "/login");
+  };
+
   return (
     <main className="min-h-screen bg-stone-100">
       {/* Hero */}
@@ -69,13 +78,13 @@ export default function HomePage() {
             Scan your face, tell us your product preferences, and instantly get a skin analysis, ingredient-conflict detection, and personalized skincare and makeup recommendations.
           </p>
 
-          <Link
-            href="/analyze"
+          <button
+            onClick={handleStart}
             className="mt-10 inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
           >
             Start Analysis
             <ArrowRight className="w-5 h-5" />
-          </Link>
+          </button>
         </div>
 
         {/* Bottom fade into features section */}
