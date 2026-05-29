@@ -5,9 +5,6 @@ backend/**/__pycache__/
 backend/**/*.pyc
 backend/.env
 
-# Saved face-scan uploads (debug)
-backend/scans/
-
 # Node
 frontend/node_modules/
 frontend/.next/
