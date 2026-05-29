@@ -3,8 +3,14 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, MapPin, ChevronRight, ChevronLeft, Loader2, CheckCircle2 } from "lucide-react";
+import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 import { analyzeSkin } from "@/lib/api";
 import { Questionnaire } from "@/lib/types";
+
+// Face-framing thresholds (normalized 0..1 of the frame)
+const FACE_MIN_WIDTH = 0.18;   // reject faces that are too far away
+const YAW_FRONT_MAX = 0.10;    // |yaw| below this counts as facing front
+const YAW_TURN_MIN = 0.14;     // |yaw| above this counts as a real side turn
 
 const BUDGET_VALUES = [
   ...Array.from({ length: 41 }, (_, i) => i * 50),       // 0, 50, 100, ..., 2000
@@ -32,6 +38,10 @@ interface ScanCapture {
   preview: string;
   score: number;
   balance: number;
+  faceDetected: boolean;
+  faceWidth: number;   // face bounding-box width as a fraction of the frame
+  centered: boolean;   // face roughly centered in the frame
+  yaw: number;         // head turn, ~ -0.5..0.5, 0 = facing front
 }
 
 export default function AnalyzePage() {
@@ -46,7 +56,11 @@ export default function AnalyzePage() {
   const [scanCompleted, setScanCompleted] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanInstruction, setScanInstruction] = useState("Please face the camera");
+  const [scanHint, setScanHint] = useState("");
+  const [modelLoading, setModelLoading] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
+  const faceReadyRef = useRef(false);
 
   const [form, setForm] = useState<FormState>(() => {
     if (typeof window !== "undefined") {
@@ -101,6 +115,34 @@ export default function AnalyzePage() {
     setScanning(false);
   }, []);
 
+  const ensureFaceLandmarker = useCallback(async () => {
+    if (faceLandmarkerRef.current) return faceLandmarkerRef.current;
+    const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
+    );
+    const modelAssetPath =
+      "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+    let landmarker: FaceLandmarker;
+    try {
+      landmarker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath, delegate: "GPU" },
+        runningMode: "VIDEO",
+        numFaces: 1,
+      });
+    } catch {
+      // Some devices/browsers lack a usable GPU delegate — fall back to CPU.
+      landmarker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath, delegate: "CPU" },
+        runningMode: "VIDEO",
+        numFaces: 1,
+      });
+    }
+    faceLandmarkerRef.current = landmarker;
+    faceReadyRef.current = true;
+    return landmarker;
+  }, []);
+
   const scoreFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const { data } = ctx.getImageData(0, 0, width, height);
     let brightness = 0;
@@ -150,6 +192,34 @@ export default function AnalyzePage() {
     ctx.drawImage(video, 0, 0, width, height);
     const metrics = scoreFrame(ctx, width, height);
 
+    const face = { faceDetected: false, faceWidth: 0, centered: false, yaw: 0 };
+    const landmarker = faceLandmarkerRef.current;
+    if (landmarker) {
+      try {
+        const res = landmarker.detectForVideo(video, performance.now());
+        const lm = res.faceLandmarks?.[0];
+        if (lm && lm.length) {
+          let minX = 1, maxX = 0, minY = 1, maxY = 0;
+          for (const p of lm) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+          }
+          const cx = (minX + maxX) / 2;
+          const cy = (minY + maxY) / 2;
+          // Nose tip (1) position between the two face-oval cheek points (234 / 454)
+          // gives a yaw proxy: ~0.5 facing front, shifts toward an edge when turning.
+          const leftX = lm[234].x, rightX = lm[454].x, noseX = lm[1].x;
+          const ratio = (noseX - leftX) / ((rightX - leftX) || 1e-6);
+          face.faceDetected = true;
+          face.faceWidth = maxX - minX;
+          face.centered = cx > 0.30 && cx < 0.70 && cy > 0.22 && cy < 0.80;
+          face.yaw = ratio - 0.5;
+        }
+      } catch {}
+    }
+
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
         if (!blob) {
@@ -157,7 +227,7 @@ export default function AnalyzePage() {
           return;
         }
         const file = new File([blob], `face-scan-${Date.now()}.jpg`, { type: "image/jpeg" });
-        resolve({ file, preview: URL.createObjectURL(blob), ...metrics });
+        resolve({ file, preview: URL.createObjectURL(blob), ...metrics, ...face });
       }, "image/jpeg", 0.9);
     });
   };
@@ -176,22 +246,61 @@ export default function AnalyzePage() {
     acceptedCaptures: ScanCapture[],
     clearFrameScore: number,
   ) => {
-    if (capture.score < clearFrameScore) return false;
-    if (phaseIndex === 0) return true;
-
-    const frontCapture = acceptedCaptures[0];
-    if (!frontCapture) return false;
-
-    const sideDelta = Math.abs(capture.balance - frontCapture.balance);
-    if (sideDelta < 0.018) return false;
-
-    if (phaseIndex === 2) {
-      const leftCapture = acceptedCaptures[1];
-      if (!leftCapture) return false;
-      return Math.abs(capture.balance - leftCapture.balance) >= 0.025;
+    // Fallback to the brightness/balance heuristic if face detection isn't available.
+    if (!faceReadyRef.current) {
+      if (capture.score < clearFrameScore) return false;
+      if (phaseIndex === 0) return true;
+      const frontCapture = acceptedCaptures[0];
+      if (!frontCapture) return false;
+      const sideDelta = Math.abs(capture.balance - frontCapture.balance);
+      if (sideDelta < 0.018) return false;
+      if (phaseIndex === 2) {
+        const leftCapture = acceptedCaptures[1];
+        if (!leftCapture) return false;
+        return Math.abs(capture.balance - leftCapture.balance) >= 0.025;
+      }
+      return true;
     }
 
-    return true;
+    // Face-detection path: a real, well-framed face is required for every phase.
+    if (!capture.faceDetected) return false;
+    if (capture.faceWidth < FACE_MIN_WIDTH) return false;
+    if (!capture.centered) return false;
+    if (capture.score < clearFrameScore) return false;
+
+    if (phaseIndex === 0) return Math.abs(capture.yaw) <= YAW_FRONT_MAX;
+    if (Math.abs(capture.yaw) < YAW_TURN_MIN) return false;
+    if (phaseIndex === 2) {
+      // The right turn must be in the opposite direction to the accepted left turn.
+      const leftCapture = acceptedCaptures[1];
+      if (!leftCapture) return false;
+      return Math.sign(capture.yaw) !== Math.sign(leftCapture.yaw);
+    }
+    return true; // phase 1: any sufficiently large turn
+  };
+
+  const phaseHint = (
+    capture: ScanCapture,
+    phaseIndex: number,
+    acceptedCaptures: ScanCapture[],
+    clearFrameScore: number,
+  ) => {
+    if (!faceReadyRef.current) return "Keep your face within the outline";
+    if (!capture.faceDetected) return "No face detected — please face the camera";
+    if (capture.faceWidth < FACE_MIN_WIDTH) return "Move a little closer";
+    if (!capture.centered) return "Center your face in the frame";
+    if (capture.score < clearFrameScore) return "Too dark or blurry — adjust your lighting";
+    if (phaseIndex === 0) {
+      return Math.abs(capture.yaw) > YAW_FRONT_MAX ? "Face the camera directly" : "Hold still…";
+    }
+    if (Math.abs(capture.yaw) < YAW_TURN_MIN) {
+      return phaseIndex === 1 ? "Keep turning your head left" : "Keep turning your head right";
+    }
+    const leftCapture = acceptedCaptures[1];
+    if (phaseIndex === 2 && leftCapture && Math.sign(capture.yaw) === Math.sign(leftCapture.yaw)) {
+      return "Turn your head the other way";
+    }
+    return "Hold still…";
   };
 
   const startFaceScan = async () => {
@@ -201,6 +310,17 @@ export default function AnalyzePage() {
     setScanCompleted(false);
     setScanProgress(0);
     setScanInstruction("Please face the camera");
+    setScanHint("");
+
+    setModelLoading(true);
+    try {
+      await ensureFaceLandmarker();
+    } catch {
+      // Model failed to load (e.g. offline) — degrade to the brightness heuristic.
+      faceReadyRef.current = false;
+    } finally {
+      setModelLoading(false);
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -235,7 +355,10 @@ export default function AnalyzePage() {
         while (Date.now() - startedAt < phase.maxMs) {
           await new Promise((resolve) => setTimeout(resolve, 360));
           const capture = await captureFrame();
-          if (capture) phaseCaptures.push(capture);
+          if (capture) {
+            phaseCaptures.push(capture);
+            setScanHint(phaseHint(capture, phaseIndex, best, clearFrameScore));
+          }
 
           const elapsed = Date.now() - startedAt;
           const phaseBase = (phaseIndex / scanPhases.length) * 100;
@@ -263,6 +386,7 @@ export default function AnalyzePage() {
       }
 
       setScanInstruction("Capture complete ✓");
+      setScanHint("");
       setScanProgress(100);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
       advanceToPreferences(best);
@@ -271,6 +395,7 @@ export default function AnalyzePage() {
       setError(e instanceof Error ? e.message : "Couldn't access the camera. Please check your browser permissions and try again.");
     } finally {
       stopCamera();
+      setScanHint("");
       if (!scanSucceeded) {
         setScanCompleted(false);
         setScanProgress(0);
@@ -344,6 +469,14 @@ export default function AnalyzePage() {
       cameraStream?.getTracks().forEach((track) => track.stop());
     };
   }, [cameraStream]);
+
+  useEffect(() => {
+    return () => {
+      faceLandmarkerRef.current?.close();
+      faceLandmarkerRef.current = null;
+      faceReadyRef.current = false;
+    };
+  }, []);
 
   const progressLabel =
     progress < 25 ? "Analyzing skin features..." :
@@ -426,7 +559,7 @@ export default function AnalyzePage() {
           </div>
           <div className="absolute left-1/2 top-[18%] -translate-x-1/2 text-center">
             <p className="text-2xl font-semibold text-white drop-shadow">{scanInstruction}</p>
-            <p className="mt-2 text-sm text-white/70">Keep your face within the outline</p>
+            <p className="mt-2 text-sm text-white/70">{scanHint || "Keep your face within the outline"}</p>
           </div>
         </div>
       )}
@@ -473,11 +606,11 @@ export default function AnalyzePage() {
                     <button
                       type="button"
                       onClick={startFaceScan}
-                      disabled={loading || scanning || scanComplete}
+                      disabled={loading || scanning || scanComplete || modelLoading}
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-900 border border-gray-200 text-sm font-semibold hover:bg-stone-50 hover:shadow-md disabled:opacity-50 transition-all"
                     >
-                      {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : scanComplete ? <CheckCircle2 className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-                      {scanning ? "Scanning..." : scanComplete ? "Scan complete" : "Start scan"}
+                      {scanning || modelLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : scanComplete ? <CheckCircle2 className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+                      {modelLoading ? "Loading model…" : scanning ? "Scanning..." : scanComplete ? "Scan complete" : "Start scan"}
                     </button>
                   </div>
               </div>
