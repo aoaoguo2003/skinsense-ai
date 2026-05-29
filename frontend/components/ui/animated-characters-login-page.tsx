@@ -318,6 +318,7 @@ function LoginPage() {
     if (email === "demo@skinsense.ai" && password === "1234") {
       try {
         localStorage.setItem("skinsense_auth", "1");
+        localStorage.setItem("skinsense_user", email);
       } catch {}
       router.push("/");
       return;

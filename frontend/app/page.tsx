@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, Camera, FlaskConical, CloudSun, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sparkles, Camera, FlaskConical, CloudSun, ArrowRight, User, LogOut } from "lucide-react";
 
 const features = [
   {
@@ -28,11 +29,29 @@ const features = [
 
 export default function HomePage() {
   const router = useRouter();
+  const [username, setUsername] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("skinsense_auth") === "1") {
+        const email = localStorage.getItem("skinsense_user") || "";
+        setUsername(email.split("@")[0] || "demo");
+      }
+    } catch {}
+  }, []);
 
   const handleStart = () => {
-    const authed =
-      typeof window !== "undefined" && localStorage.getItem("skinsense_auth") === "1";
-    router.push(authed ? "/analyze" : "/login");
+    router.push(username ? "/analyze" : "/login");
+  };
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("skinsense_auth");
+      localStorage.removeItem("skinsense_user");
+    } catch {}
+    setUsername(null);
+    setMenuOpen(false);
   };
 
   return (
@@ -50,14 +69,36 @@ export default function HomePage() {
         {/* Dark scrim over image */}
         <div className="absolute inset-0 bg-black/45 md:bg-black/40" />
 
-        {/* Top bar with login entry */}
+        {/* Top bar with login entry / user menu */}
         <div className="absolute top-0 inset-x-0 z-20 flex justify-end p-5 sm:p-6">
-          <Link
-            href="/login"
-            className="text-sm font-medium text-white/90 hover:text-white border border-white/30 hover:border-white/60 rounded-full px-4 py-1.5 backdrop-blur-sm transition-colors"
-          >
-            Log in
-          </Link>
+          {username ? (
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white border border-white/30 hover:border-white/60 rounded-full px-4 py-1.5 backdrop-blur-sm transition-colors"
+              >
+                <User className="w-4 h-4" />
+                {username}
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-36 rounded-xl bg-white shadow-lg overflow-hidden">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-stone-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 text-gray-400" /> Log out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm font-medium text-white/90 hover:text-white border border-white/30 hover:border-white/60 rounded-full px-4 py-1.5 backdrop-blur-sm transition-colors"
+            >
+              Log in
+            </Link>
+          )}
         </div>
 
         <div className="relative z-10 flex flex-col items-center max-w-3xl">
