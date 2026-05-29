@@ -17,7 +17,9 @@ router = APIRouter(prefix="/api", tags=["analyze"])
 
 # --- Debug: save uploaded face scans to disk so they can be reviewed ---
 SCANS_DIR = Path(os.getenv("SCANS_DIR", "scans"))
-SAVE_SCANS = os.getenv("SAVE_SCANS", "1") != "0"
+# Off by default — only enable locally (SAVE_SCANS=1) for debugging.
+# Never enable on the production/Render backend (would store users' faces).
+SAVE_SCANS = os.getenv("SAVE_SCANS", "0") == "1"
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
