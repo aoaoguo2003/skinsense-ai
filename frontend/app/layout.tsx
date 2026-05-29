@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SkinSense AI · 智能肌肤检测",
-  description: "AI 驱动的个性化肌肤分析与护肤品推荐，结合天气和成分分析",
+  title: "SkinSense AI · Smart Skin Analysis",
+  description: "AI-powered personalized skin analysis and skincare recommendations, with weather and ingredient insights",
 };
 
 export default function RootLayout({

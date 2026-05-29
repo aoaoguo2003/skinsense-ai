@@ -18,10 +18,10 @@ const SEVERITY_COLOR: Record<string, string> = {
 };
 
 const PRICE_LABEL: Record<string, string> = {
-  "$": "经济",
-  "$$": "中档",
-  "$$$": "高端",
-  "$$$$": "奢华",
+  "$": "Budget",
+  "$$": "Mid-range",
+  "$$$": "Premium",
+  "$$$$": "Luxury",
 };
 
 function ScoreRing({ score }: { score: number }) {
@@ -100,7 +100,7 @@ function ProductCard({ product }: { product: ProductRecommendation }) {
         </div>
         <p className="text-sm text-gray-600 mt-3 leading-relaxed">{product.why_recommended}</p>
         <p className="text-xs text-gray-400 mt-2">
-          <span className="font-medium text-gray-500">用法：</span>{product.usage}
+          <span className="font-medium text-gray-500">Usage: </span>{product.usage}
         </p>
       </div>
 
@@ -109,7 +109,7 @@ function ProductCard({ product }: { product: ProductRecommendation }) {
         className="w-full px-5 py-3 text-sm text-rose-600 font-medium border-t border-gray-50 hover:bg-rose-50 transition-colors text-left flex items-center gap-1"
       >
         <FlaskConical className="w-4 h-4" />
-        {open ? "收起" : "查看"} 关键成分解析
+        {open ? "Hide" : "View"} key ingredients
       </button>
 
       {open && (
@@ -149,16 +149,16 @@ function ConcernSolutionCard({ solution }: { solution: ConcernSolution }) {
       </div>
       <div className="space-y-3">
         <div className="bg-gray-50 rounded-xl p-3">
-          <p className="text-xs font-semibold text-gray-500 mb-1">成因分析</p>
+          <p className="text-xs font-semibold text-gray-500 mb-1">Cause analysis</p>
           <p className="text-sm text-gray-600 leading-relaxed">{solution.analysis}</p>
         </div>
         <div className="bg-rose-50 rounded-xl p-3">
-          <p className="text-xs font-semibold text-rose-500 mb-1">针对方案</p>
+          <p className="text-xs font-semibold text-rose-500 mb-1">Targeted solution</p>
           <p className="text-sm text-gray-700 leading-relaxed">{solution.targeted_solution}</p>
         </div>
         {solution.key_ingredients.length > 0 && (
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">关键成分</p>
+            <p className="text-xs font-semibold text-gray-500 mb-2">Key ingredients</p>
             <div className="flex flex-wrap gap-1.5">
               {solution.key_ingredients.map((ing, i) => (
                 <span key={i} className="text-xs bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100 px-2.5 py-1 rounded-full font-medium">
@@ -185,13 +185,13 @@ function ConflictCard({ conflict }: { conflict: IngredientConflict }) {
       <div className="flex items-center gap-2 mb-2">
         <AlertTriangle className="w-4 h-4 flex-shrink-0" />
         <span className="text-sm font-semibold">
-          {conflict.severity === "mild" ? "轻微" : conflict.severity === "moderate" ? "中度" : "严重"} 冲突
+          {conflict.severity === "mild" ? "Mild" : conflict.severity === "moderate" ? "Moderate" : "Severe"} conflict
         </span>
       </div>
-      <p className="text-xs font-medium mb-1">相关产品：{conflict.products_involved.join(" + ")}</p>
-      <p className="text-xs mb-1">冲突成分：<span className="font-medium">{conflict.conflicting_ingredients.join("、")}</span></p>
+      <p className="text-xs font-medium mb-1">Products involved: {conflict.products_involved.join(" + ")}</p>
+      <p className="text-xs mb-1">Conflicting ingredients: <span className="font-medium">{conflict.conflicting_ingredients.join(", ")}</span></p>
       <p className="text-xs mb-2 leading-relaxed">{conflict.issue}</p>
-      <p className="text-xs font-medium">建议：{conflict.recommendation}</p>
+      <p className="text-xs font-medium">Recommendation: {conflict.recommendation}</p>
     </div>
   );
 }
@@ -237,7 +237,7 @@ export default function ResultsPage() {
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = `肌肤报告_${new Date().toLocaleDateString("zh-CN").replace(/\//g, "-")}.png`;
+      link.download = `skin-report_${new Date().toLocaleDateString("en-CA").replace(/\//g, "-")}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch (e) {
@@ -266,11 +266,11 @@ export default function ResultsPage() {
             <ArrowLeft className="w-4 h-4 text-gray-600" />
           </Link>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">你的专属肌肤报告</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Your Personalized Skin Report</h1>
             {weather && (
               <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
                 <CloudSun className="w-3.5 h-3.5" />
-                {weather.city}, {weather.country} · {weather.temp_c}°C · 湿度 {weather.humidity}%
+                {weather.city}, {weather.country} · {weather.temp_c}°C · Humidity {weather.humidity}%
               </p>
             )}
           </div>
@@ -282,7 +282,7 @@ export default function ResultsPage() {
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-stone-50 hover:shadow-sm disabled:opacity-50 transition-all"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              {saving === "pdf" ? "生成中..." : saving === "image" ? "截图中..." : "保存报告"}
+              {saving === "pdf" ? "Generating..." : saving === "image" ? "Capturing..." : "Save Report"}
             </button>
             {showMenu && (
               <div className="absolute right-0 top-full mt-1.5 w-40 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden z-10">
@@ -290,13 +290,13 @@ export default function ResultsPage() {
                   onClick={saveAsPDF}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-stone-50 transition-colors"
                 >
-                  <FileText className="w-4 h-4 text-gray-400" /> 保存为 PDF
+                  <FileText className="w-4 h-4 text-gray-400" /> Save as PDF
                 </button>
                 <button
                   onClick={saveAsImage}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-700 hover:bg-stone-50 transition-colors border-t border-gray-50"
                 >
-                  <FileImage className="w-4 h-4 text-gray-400" /> 保存为图片
+                  <FileImage className="w-4 h-4 text-gray-400" /> Save as Image
                 </button>
               </div>
             )}
@@ -321,7 +321,7 @@ export default function ResultsPage() {
                   {skin_analysis.skin_type}
                 </span>
                 <span className="bg-white/80 text-gray-600 text-xs font-medium px-3 py-1 rounded-full ring-1 ring-stone-200">
-                  肤色：{skin_analysis.skin_tone}
+                  Skin tone: {skin_analysis.skin_tone}
                 </span>
               </div>
               <p className="text-sm text-gray-600 leading-relaxed">{skin_analysis.summary}</p>
@@ -339,7 +339,7 @@ export default function ResultsPage() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Target className="w-5 h-5 text-rose-500" />
-              <h2 className="text-xl font-bold text-gray-900">逐项肌肤解决方案</h2>
+              <h2 className="text-xl font-bold text-gray-900">Concern-by-Concern Solutions</h2>
             </div>
             <div className="space-y-4">
               {concern_solutions.map((s, i) => <ConcernSolutionCard key={i} solution={s} />)}
@@ -352,7 +352,7 @@ export default function ResultsPage() {
           <div className="bg-sky-50 border border-sky-200 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <CloudSun className="w-5 h-5 text-sky-500" />
-              <h3 className="font-semibold text-gray-900">天气适配建议</h3>
+              <h3 className="font-semibold text-gray-900">Weather-Adapted Advice</h3>
             </div>
             <p className="text-sm text-gray-600 mb-3 leading-relaxed">{weather_adjustment.recommendation}</p>
             <ul className="space-y-1">
@@ -370,7 +370,7 @@ export default function ResultsPage() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-rose-500" />
-            <h2 className="text-xl font-bold text-gray-900">个性化产品推荐</h2>
+            <h2 className="text-xl font-bold text-gray-900">Personalized Recommendations</h2>
           </div>
           <div className="space-y-4">
             {product_recommendations.map((p, i) => <ProductCard key={i} product={p} />)}
@@ -382,7 +382,7 @@ export default function ResultsPage() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle className="w-5 h-5 text-orange-500" />
-              <h2 className="text-xl font-bold text-gray-900">成分冲突提醒</h2>
+              <h2 className="text-xl font-bold text-gray-900">Ingredient Conflict Alerts</h2>
             </div>
             <div className="space-y-3">
               {ingredient_conflicts.current_product_issues.map((c, i) => (
@@ -397,7 +397,7 @@ export default function ResultsPage() {
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <FlaskConical className="w-5 h-5 text-emerald-500" />
-              <h3 className="font-semibold text-gray-900">成分协同效果</h3>
+              <h3 className="font-semibold text-gray-900">Ingredient Synergies</h3>
             </div>
             <div className="space-y-3">
               {ingredient_conflicts.recommended_synergies.map((s, i) => (
@@ -415,7 +415,7 @@ export default function ResultsPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Sun className="w-4 h-4 text-amber-500" />
-              <h3 className="font-semibold text-gray-900">早间护肤步骤</h3>
+              <h3 className="font-semibold text-gray-900">Morning Routine</h3>
             </div>
             <ol className="space-y-2">
               {ingredient_conflicts.timing_guide.morning_routine.map((step, i) => (
@@ -429,7 +429,7 @@ export default function ResultsPage() {
           <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Moon className="w-4 h-4 text-indigo-500" />
-              <h3 className="font-semibold text-gray-900">晚间护肤步骤</h3>
+              <h3 className="font-semibold text-gray-900">Evening Routine</h3>
             </div>
             <ol className="space-y-2">
               {ingredient_conflicts.timing_guide.evening_routine.map((step, i) => (
@@ -446,7 +446,7 @@ export default function ResultsPage() {
         {lifestyle_tips.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-5">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Leaf className="w-4 h-4 text-green-500" /> 生活习惯小贴士
+              <Leaf className="w-4 h-4 text-green-500" /> Lifestyle Tips
             </h3>
             <ul className="space-y-2">
               {lifestyle_tips.map((tip, i) => (
@@ -464,7 +464,7 @@ export default function ResultsPage() {
             href="/analyze"
             className="inline-flex items-center gap-2 text-sm text-rose-500 hover:text-rose-600 font-medium"
           >
-            <ArrowLeft className="w-4 h-4" /> 重新检测
+            <ArrowLeft className="w-4 h-4" /> Start Over
           </Link>
         </div>
         </div>{/* end reportRef */}

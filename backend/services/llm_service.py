@@ -25,7 +25,7 @@ Your analysis must be:
 - Practical with real, commercially available products
 - Honest about ingredient interactions and potential conflicts
 
-IMPORTANT: Respond entirely in Simplified Chinese (简体中文). Every text field in the JSON must be written in Chinese.
+IMPORTANT: Respond entirely in English. Every text field in the JSON must be written in English.
 
 Always respond in valid JSON format as specified."""
 
@@ -69,16 +69,16 @@ Return ONLY valid JSON with this exact structure:
     "summary": "2-3 sentence analysis"
   },
   "weather_adjustment": {
-    "recommendation": "详细说明当前天气/气候如何影响该用户的肌肤状态，需具体说明温度、湿度、紫外线的影响",
-    "key_considerations": ["至少4条具体的天气适配护肤建议"]
+    "recommendation": "Explain in detail how the current weather/climate affects this user's skin, specifically addressing the impact of temperature, humidity, and UV",
+    "key_considerations": ["At least 4 specific weather-adapted skincare tips"]
   },
   "concern_solutions": [
     {
-      "concern": "皮肤问题名称（与用户填写的保持一致）",
-      "analysis": "该问题的成因分析（2句话，结合用户肤质特点和当前天气环境）",
-      "targeted_solution": "针对此问题的具体护肤步骤和改善方案（2-3句话，提及可使用的成分或产品类型）",
-      "key_ingredients": ["对此问题最有效的核心成分1", "成分2", "成分3"],
-      "weather_impact": "当前气候条件对此问题的影响及针对性应对策略（1句话）"
+      "concern": "Name of the skin concern (consistent with what the user reported)",
+      "analysis": "Root-cause analysis of this concern (2 sentences, combining the user's skin characteristics and current weather environment)",
+      "targeted_solution": "Specific skincare steps and improvement plan for this concern (2-3 sentences, mentioning usable ingredients or product types)",
+      "key_ingredients": ["Most effective core ingredient 1 for this concern", "ingredient 2", "ingredient 3"],
+      "weather_impact": "How the current climate affects this concern and the targeted coping strategy (1 sentence)"
     }
   ],
   "product_recommendations": [

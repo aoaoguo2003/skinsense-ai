@@ -10,8 +10,8 @@ const BUDGET_VALUES = [
   ...Array.from({ length: 41 }, (_, i) => i * 50),       // 0, 50, 100, ..., 2000
   ...Array.from({ length: 8 }, (_, i) => 3000 + i * 1000), // 3000, 4000, ..., 10000
 ];
-const TEXTURES = ["清爽水感", "轻薄乳液", "普通乳霜", "厚重滋润", "无偏好"];
-const FRAGRANCES = ["偏好有香味", "偏好无香", "无所谓"];
+const TEXTURES = ["Light & watery", "Lightweight lotion", "Regular cream", "Rich & nourishing", "No preference"];
+const FRAGRANCES = ["Prefer scented", "Prefer fragrance-free", "No preference"];
 interface FormState {
   step: number;
   budgetMin: number;
@@ -45,7 +45,7 @@ export default function AnalyzePage() {
   const [scanning, setScanning] = useState(false);
   const [scanCompleted, setScanCompleted] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
-  const [scanInstruction, setScanInstruction] = useState("请正对镜头");
+  const [scanInstruction, setScanInstruction] = useState("Please face the camera");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   const [form, setForm] = useState<FormState>(() => {
@@ -200,7 +200,7 @@ export default function AnalyzePage() {
     setError("");
     setScanCompleted(false);
     setScanProgress(0);
-    setScanInstruction("请正对镜头");
+    setScanInstruction("Please face the camera");
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -219,9 +219,9 @@ export default function AnalyzePage() {
       }
 
       const scanPhases = [
-        { label: "请正对镜头", failLabel: "正脸", minMs: 2200, maxMs: 5200 },
-        { label: "请缓慢向左转头", failLabel: "左脸", minMs: 3200, maxMs: 7600 },
-        { label: "请缓慢向右转头", failLabel: "右脸", minMs: 3200, maxMs: 7600 },
+        { label: "Please face the camera", failLabel: "front", minMs: 2200, maxMs: 5200 },
+        { label: "Slowly turn your head left", failLabel: "left side", minMs: 3200, maxMs: 7600 },
+        { label: "Slowly turn your head right", failLabel: "right side", minMs: 3200, maxMs: 7600 },
       ];
       const clearFrameScore = 0.42;
       const best: ScanCapture[] = [];
@@ -253,7 +253,7 @@ export default function AnalyzePage() {
           .sort((a, b) => b.score - a.score)[0];
         if (!phaseBest) {
           phaseCaptures.forEach((capture) => URL.revokeObjectURL(capture.preview));
-          throw new Error(`${phase.failLabel}没有扫描清楚，请转头幅度稍大一些并保持稳定后重试`);
+          throw new Error(`Couldn't capture your ${phase.failLabel} clearly. Turn a bit further and hold steady, then try again.`);
         }
 
         best.push(phaseBest);
@@ -262,13 +262,13 @@ export default function AnalyzePage() {
           .forEach((capture) => URL.revokeObjectURL(capture.preview));
       }
 
-      setScanInstruction("采集完成 ✓");
+      setScanInstruction("Capture complete ✓");
       setScanProgress(100);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
       advanceToPreferences(best);
       scanSucceeded = true;
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "无法打开摄像头，请检查浏览器权限后重试");
+      setError(e instanceof Error ? e.message : "Couldn't access the camera. Please check your browser permissions and try again.");
     } finally {
       stopCamera();
       if (!scanSucceeded) {
@@ -288,7 +288,7 @@ export default function AnalyzePage() {
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-            { headers: { "Accept-Language": "zh-CN,zh;q=0.9" } }
+            { headers: { "Accept-Language": "en-US,en;q=0.9" } }
           );
           const data = await res.json();
           const city =
@@ -332,10 +332,10 @@ export default function AnalyzePage() {
   }, [cameraStream]);
 
   const progressLabel =
-    progress < 25 ? "正在分析肤质特征..." :
-    progress < 55 ? "正在制定护肤方案..." :
-    progress < 80 ? "正在筛选产品推荐..." :
-    "即将完成...";
+    progress < 25 ? "Analyzing skin features..." :
+    progress < 55 ? "Building your skincare plan..." :
+    progress < 80 ? "Selecting product recommendations..." :
+    "Almost done...";
   const scanComplete = scanCompleted || form.scanImages.length >= 3;
 
   const canNext = () => {
@@ -349,14 +349,14 @@ export default function AnalyzePage() {
     setError("");
     try {
       const questionnaire: Questionnaire = {
-        skin_concerns: ["由AI根据面部采集自动识别"],
-        age_range: "由AI根据面部图像辅助判断，用户未手动填写",
-        gender: "由AI根据面部图像辅助判断，用户未手动填写",
-        budget: `¥${form.budgetMin}-${form.budgetMax >= 10000 ? "10000以上" : form.budgetMax}（每件）`,
-        preferred_texture: form.texture || "无偏好",
-        avoid_ingredients: form.avoidIngredients || "无",
-        fragrance_preference: form.fragrance || "无所谓",
-        environment: form.city || "未知",
+        skin_concerns: ["Auto-detected by AI from the face capture"],
+        age_range: "Inferred by AI from facial images; not provided by the user",
+        gender: "Inferred by AI from facial images; not provided by the user",
+        budget: `¥${form.budgetMin}-${form.budgetMax >= 10000 ? "10000+" : form.budgetMax} (per item)`,
+        preferred_texture: form.texture || "No preference",
+        avoid_ingredients: form.avoidIngredients || "None",
+        fragrance_preference: form.fragrance || "No preference",
+        environment: form.city || "Unknown",
       };
 
       const result = await analyzeSkin({
@@ -372,7 +372,7 @@ export default function AnalyzePage() {
       sessionStorage.removeItem("skinsense_form");
       router.push("/results");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "分析失败，请重试");
+      setError(e instanceof Error ? e.message : "Analysis failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -412,7 +412,7 @@ export default function AnalyzePage() {
           </div>
           <div className="absolute left-1/2 top-[18%] -translate-x-1/2 text-center">
             <p className="text-2xl font-semibold text-white drop-shadow">{scanInstruction}</p>
-            <p className="mt-2 text-sm text-white/70">保持面部在轮廓范围内</p>
+            <p className="mt-2 text-sm text-white/70">Keep your face within the outline</p>
           </div>
         </div>
       )}
@@ -425,8 +425,8 @@ export default function AnalyzePage() {
           {/* Step 1: Face scan */}
           {form.step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">面部采集</h2>
-              <p className="text-sm text-gray-500 -mt-2">保持正对镜头，使用自然、稳定的光线。</p>
+              <h2 className="text-2xl font-bold text-gray-900">Face Capture</h2>
+              <p className="text-sm text-gray-500 -mt-2">Face the camera directly and use natural, steady lighting.</p>
 
               <div>
                   <div className="relative overflow-hidden rounded-2xl aspect-video bg-neutral-950 flex items-center justify-center">
@@ -443,13 +443,13 @@ export default function AnalyzePage() {
                       {scanComplete ? (
                         <>
                           <CheckCircle2 className="w-10 h-10 text-amber-300 mx-auto mb-3" />
-                          <p className="text-base font-semibold text-white">扫描完成</p>
-                          <p className="mt-2 text-xs text-amber-200/75">已完成正脸、左脸、右脸采集</p>
+                          <p className="text-base font-semibold text-white">Scan complete</p>
+                          <p className="mt-2 text-xs text-amber-200/75">Front, left, and right captures complete</p>
                         </>
                       ) : (
                         <>
                           <Camera className="w-9 h-9 text-amber-300 mx-auto mb-3" />
-                          <p className="text-sm text-white font-medium">准备好后开始扫描</p>
+                          <p className="text-sm text-white font-medium">Start scanning when you&apos;re ready</p>
                         </>
                       )}
                     </div>
@@ -463,7 +463,7 @@ export default function AnalyzePage() {
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-gray-900 border border-gray-200 text-sm font-semibold hover:bg-stone-50 hover:shadow-md disabled:opacity-50 transition-all"
                     >
                       {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : scanComplete ? <CheckCircle2 className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-                      {scanning ? "扫描中..." : scanComplete ? "扫描完成" : "开始扫描"}
+                      {scanning ? "Scanning..." : scanComplete ? "Scan complete" : "Start scan"}
                     </button>
                   </div>
               </div>
@@ -473,7 +473,7 @@ export default function AnalyzePage() {
                   <span className="mt-0.5 shrink-0">⚠️</span>
                   <div>
                     <p>{error}</p>
-                    <p className="mt-1 text-xs text-red-500">点击「开始扫描」可重新采集。</p>
+                    <p className="mt-1 text-xs text-red-500">Click &quot;Start scan&quot; to capture again.</p>
                   </div>
                 </div>
               )}
@@ -484,10 +484,10 @@ export default function AnalyzePage() {
           {form.step === 2 && (
             <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-stretch">
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-gray-900">产品偏好</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Product Preferences</h2>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">预算范围（每件单品）</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Budget range (per item)</label>
                   <div className="flex justify-between items-center mb-4 px-1">
                     <span className="text-base font-semibold text-stone-500">¥{form.budgetMin}</span>
                     <span className="text-xs text-stone-400">—</span>
@@ -548,48 +548,48 @@ export default function AnalyzePage() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">产品质地偏好</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Texture preference</label>
                     <select
                       value={form.texture}
                       onChange={(e) => update({ texture: e.target.value })}
                       className="w-full border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                     >
-                      <option value="">请选择</option>
+                      <option value="">Select</option>
                       {TEXTURES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">香味偏好</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fragrance preference</label>
                     <select
                       value={form.fragrance}
                       onChange={(e) => update({ fragrance: e.target.value })}
                       className="w-full border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                     >
-                      <option value="">请选择</option>
+                      <option value="">Select</option>
                       {FRAGRANCES.map((f) => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">需要避免的成分（可选）</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Ingredients to avoid (optional)</label>
                   <input
                     type="text"
                     value={form.avoidIngredients}
                     onChange={(e) => update({ avoidIngredients: e.target.value })}
-                    placeholder="例如：酒精、香料、矿油..."
+                    placeholder="e.g. alcohol, fragrance, mineral oil..."
                     className="w-full border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">所在城市</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Your city</label>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <input
                       type="text"
-                      value={gpsLocating ? "定位中..." : form.city}
+                      value={gpsLocating ? "Locating..." : form.city}
                       onChange={(e) => update({ city: e.target.value, useGPS: false })}
-                      placeholder="例如：北京、Shanghai、London..."
+                      placeholder="e.g. Beijing, Shanghai, London..."
                       readOnly={gpsLocating}
                       className="flex-1 border border-stone-400 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-stone-500"
                     />
@@ -604,7 +604,7 @@ export default function AnalyzePage() {
                       }`}
                     >
                       <MapPin className="w-4 h-4" />
-                      {gpsLocating ? "定位中..." : form.useGPS ? "已定位" : "自动定位"}
+                      {gpsLocating ? "Locating..." : form.useGPS ? "Located" : "Auto-locate"}
                     </button>
                   </div>
                 </div>
@@ -625,7 +625,7 @@ export default function AnalyzePage() {
                 <div className="absolute inset-x-6 bottom-6 rounded-2xl border border-white/30 bg-white/65 p-5 shadow-lg backdrop-blur-md">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">Product Profile</p>
                   <p className="mt-2 text-sm leading-relaxed text-stone-700">
-                    预算、质地、香味和避开成分会参与推荐排序，让结果更贴近你的真实购买偏好。
+                    Budget, texture, fragrance, and avoided ingredients all factor into ranking, so the results match your real buying preferences.
                   </p>
                 </div>
               </div>
@@ -638,7 +638,7 @@ export default function AnalyzePage() {
               onClick={() => update({ step: form.step - 1 })}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors ${form.step === 1 ? "invisible" : ""}`}
             >
-              <ChevronLeft className="w-4 h-4" /> 上一步
+              <ChevronLeft className="w-4 h-4" /> Back
             </button>
 
             {form.step < 2 ? (
@@ -647,7 +647,7 @@ export default function AnalyzePage() {
                 disabled={!canNext()}
                 className="flex items-center gap-2 px-6 py-2.5 bg-white text-gray-900 border border-gray-200 rounded-xl font-medium hover:bg-stone-50 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                下一步 <ChevronRight className="w-4 h-4" />
+                Next <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
               <div className="flex flex-col items-end gap-3">
@@ -657,13 +657,13 @@ export default function AnalyzePage() {
                   className="flex items-center gap-2 px-8 py-2.5 bg-white text-gray-900 border border-gray-200 rounded-xl font-semibold hover:bg-stone-50 hover:shadow-md disabled:opacity-50 transition-all"
                 >
                   {loading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> AI 分析中...</>
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</>
                   ) : (
-                    <><Camera className="w-4 h-4" /> 开始分析</>
+                    <><Camera className="w-4 h-4" /> Start Analysis</>
                   )}
                 </button>
                 {!loading && (
-                  <p className="text-xs text-gray-400">约需 2–3 分钟</p>
+                  <p className="text-xs text-gray-400">Takes about 2–3 minutes</p>
                 )}
               </div>
             )}

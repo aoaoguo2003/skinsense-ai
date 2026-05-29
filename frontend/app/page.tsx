@@ -5,23 +5,23 @@ import { Sparkles, Camera, FlaskConical, CloudSun, ArrowRight } from "lucide-rea
 const features = [
   {
     icon: <Camera className="w-6 h-6" />,
-    title: "智能肌肤分析",
-    desc: "用摄像头扫描正脸与侧脸，AI 精准识别你的肤质、肤色和皮肤问题",
+    title: "Smart Skin Analysis",
+    desc: "Scan your face from the front and sides; AI accurately identifies your skin type, tone, and concerns.",
   },
   {
     icon: <Sparkles className="w-6 h-6" />,
-    title: "个性化产品推荐",
-    desc: "基于你的肤质和预算，推荐真实市售化妆品与护肤品",
+    title: "Personalized Recommendations",
+    desc: "Based on your skin type and budget, we recommend real, market-available skincare and makeup products.",
   },
   {
     icon: <FlaskConical className="w-6 h-6" />,
-    title: "成分深度解析",
-    desc: "了解每款推荐产品的关键成分，检测成分互斥冲突，发现协同增效组合",
+    title: "In-Depth Ingredient Analysis",
+    desc: "Understand the key ingredients in each product, detect ingredient conflicts, and discover synergistic combinations.",
   },
   {
     icon: <CloudSun className="w-6 h-6" />,
-    title: "天气适配推荐",
-    desc: "结合你所在地的实时天气、湿度和紫外线强度，给出最适合当下环境的建议",
+    title: "Weather-Adapted Advice",
+    desc: "Combining real-time local weather, humidity, and UV index to give advice best suited to your current environment.",
   },
 ];
 
@@ -41,29 +41,39 @@ export default function HomePage() {
         {/* Dark scrim over image */}
         <div className="absolute inset-0 bg-black/45 md:bg-black/40" />
 
+        {/* Top bar with login entry */}
+        <div className="absolute top-0 inset-x-0 z-20 flex justify-end p-5 sm:p-6">
+          <Link
+            href="/login"
+            className="text-sm font-medium text-white/90 hover:text-white border border-white/30 hover:border-white/60 rounded-full px-4 py-1.5 backdrop-blur-sm transition-colors"
+          >
+            Log in
+          </Link>
+        </div>
+
         <div className="relative z-10 flex flex-col items-center max-w-3xl">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-sm text-white/90 font-medium mb-8">
             <Sparkles className="w-4 h-4" />
-            你的专业美容顾问
+            Your professional beauty advisor
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight">
-            了解你的肌肤，
+            Understand your skin,
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-fuchsia-300">
-              找到专属配方
+              find your formula
             </span>
           </h1>
 
           <p className="mt-6 text-base md:text-lg text-white/70 max-w-xl leading-relaxed">
-            扫描面部，告诉我们你的产品偏好，即刻为您分析肤质，检测成分冲突，个性化为您推荐最适合您的护肤与彩妆产品。
+            Scan your face, tell us your product preferences, and instantly get a skin analysis, ingredient-conflict detection, and personalized skincare and makeup recommendations.
           </p>
 
           <Link
             href="/analyze"
             className="mt-10 inline-flex items-center gap-2 bg-white text-gray-900 font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
           >
-            开始检测
+            Start Analysis
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
