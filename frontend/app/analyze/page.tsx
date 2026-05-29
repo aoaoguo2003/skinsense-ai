@@ -412,22 +412,6 @@ export default function AnalyzePage() {
       <canvas ref={canvasRef} className="hidden" />
 
       <div className={`relative z-10 ${form.step === 2 ? "max-w-5xl" : "max-w-2xl"} mx-auto transition-all duration-500`}>
-        {/* Progress */}
-        <div className="flex items-center gap-2 mb-8">
-          {[1, 2].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                form.step >= s ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-400 border border-stone-200"
-              }`}>
-                {s}
-              </div>
-              {s < 2 && <div className={`flex-1 h-1 w-16 rounded ${form.step > s ? "bg-stone-500" : "bg-stone-200"}`} />}
-            </div>
-          ))}
-          <span className="ml-auto text-sm text-stone-400">
-            {form.step === 1 ? "面部采集" : "偏好"}
-          </span>
-        </div>
 
         <div className="rounded-3xl p-6 md:p-8">
 
