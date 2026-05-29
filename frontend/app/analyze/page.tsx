@@ -319,6 +319,13 @@ export default function AnalyzePage() {
   }, [loading]);
 
   useEffect(() => {
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+    if (nav?.type === "reload") {
+      router.replace("/");
+    }
+  }, [router]);
+
+  useEffect(() => {
     return () => {
       cameraStream?.getTracks().forEach((track) => track.stop());
     };
