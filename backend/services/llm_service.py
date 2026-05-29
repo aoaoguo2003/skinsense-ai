@@ -35,6 +35,7 @@ def _build_analysis_prompt(
     weather: Optional[dict],
     current_products: Optional[list[str]],
     image_count: int,
+    image_labels: Optional[list[str]] = None,
 ) -> str:
     parts = []
 
@@ -53,7 +54,20 @@ def _build_analysis_prompt(
         parts.append("\n## User's Current Products\n" + "\n".join(f"- {p}" for p in current_products))
 
     if image_count > 0:
-        parts.append("\n## Note\nComprehensive facial scan data has been provided. Base your skin analysis on the overall scan results, focusing on consistent skin signals rather than any single-frame artifact.")
+        if image_labels:
+            lines = "\n".join(f"- Image {i + 1}: {label}" for i, label in enumerate(image_labels))
+            parts.append(
+                "\n## Provided Images\n"
+                "You are given the following facial scan images, in this order:\n"
+                f"{lines}\n\n"
+                "The close-up crops are high-resolution views of specific facial zones. "
+                "Ground your skin analysis in what is actually visible in these images "
+                "(e.g. visible pores, texture, oiliness/shine, redness, dryness/flaking, "
+                "blemishes, fine lines), and prefer consistent signals across images over "
+                "any single-frame artifact."
+            )
+        else:
+            parts.append("\n## Note\nComprehensive facial scan data has been provided. Base your skin analysis on the overall scan results, focusing on consistent skin signals rather than any single-frame artifact.")
 
     parts.append("""
 ## Required Response Format (JSON)
@@ -134,6 +148,7 @@ async def analyze_with_claude(
     image_bytes: Optional[bytes],
     image_media_type: Optional[str],
     image_payloads: Optional[list[tuple[bytes, str]]] = None,
+    image_labels: Optional[list[str]] = None,
 ) -> dict:
     import anthropic
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -141,10 +156,10 @@ async def analyze_with_claude(
     image_payloads = image_payloads or (
         [(image_bytes, image_media_type or "image/jpeg")] if image_bytes else []
     )
-    prompt = _build_analysis_prompt(questionnaire, weather, current_products, len(image_payloads))
+    prompt = _build_analysis_prompt(questionnaire, weather, current_products, len(image_payloads), image_labels)
 
     content = []
-    for payload_bytes, payload_media_type in image_payloads[:3]:
+    for payload_bytes, payload_media_type in image_payloads[:6]:
         content.append({
             "type": "image",
             "source": {
@@ -196,6 +211,7 @@ async def analyze_with_openai(
     image_bytes: Optional[bytes],
     image_media_type: Optional[str],
     image_payloads: Optional[list[tuple[bytes, str]]] = None,
+    image_labels: Optional[list[str]] = None,
 ) -> dict:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=settings.openai_api_key)
@@ -203,10 +219,10 @@ async def analyze_with_openai(
     image_payloads = image_payloads or (
         [(image_bytes, image_media_type or "image/jpeg")] if image_bytes else []
     )
-    prompt = _build_analysis_prompt(questionnaire, weather, current_products, len(image_payloads))
+    prompt = _build_analysis_prompt(questionnaire, weather, current_products, len(image_payloads), image_labels)
 
     content = []
-    for payload_bytes, payload_media_type in image_payloads[:3]:
+    for payload_bytes, payload_media_type in image_payloads[:6]:
         b64 = base64.standard_b64encode(payload_bytes).decode("utf-8")
         mime = payload_media_type or "image/jpeg"
         content.append({
@@ -235,7 +251,8 @@ async def analyze_skin(
     image_bytes: Optional[bytes] = None,
     image_media_type: Optional[str] = None,
     image_payloads: Optional[list[tuple[bytes, str]]] = None,
+    image_labels: Optional[list[str]] = None,
 ) -> dict:
     if settings.llm_provider == "openai":
-        return await analyze_with_openai(questionnaire, weather, current_products, image_bytes, image_media_type, image_payloads)
-    return await analyze_with_claude(questionnaire, weather, current_products, image_bytes, image_media_type, image_payloads)
+        return await analyze_with_openai(questionnaire, weather, current_products, image_bytes, image_media_type, image_payloads, image_labels)
+    return await analyze_with_claude(questionnaire, weather, current_products, image_bytes, image_media_type, image_payloads, image_labels)

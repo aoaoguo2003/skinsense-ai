@@ -20,11 +20,21 @@ async def analyze_endpoint(
     longitude: Optional[float] = Form(None),
     image: Optional[UploadFile] = File(None),
     images: Optional[list[UploadFile]] = File(None),
+    image_labels: Optional[str] = Form(None),
 ):
     try:
         q_data = json.loads(questionnaire)
     except json.JSONDecodeError:
         raise HTTPException(status_code=422, detail="Invalid questionnaire JSON")
+
+    labels_list = None
+    if image_labels:
+        try:
+            parsed = json.loads(image_labels)
+            if isinstance(parsed, list):
+                labels_list = [str(x) for x in parsed]
+        except json.JSONDecodeError:
+            labels_list = None
 
     products_list = None
     if current_products:
@@ -47,8 +57,10 @@ async def analyze_endpoint(
     if not upload_images and image and image.filename:
         upload_images = [image]
 
-    if len(upload_images) > 3:
-        upload_images = upload_images[:3]
+    if len(upload_images) > 6:
+        upload_images = upload_images[:6]
+    if labels_list is not None:
+        labels_list = labels_list[: len(upload_images)]
 
     total_image_bytes = 0
     for upload in upload_images:
@@ -73,6 +85,7 @@ async def analyze_endpoint(
         image_bytes=image_bytes,
         image_media_type=image_media_type,
         image_payloads=image_payloads,
+        image_labels=labels_list,
     )
 
     return {"status": "ok", "weather": weather, "analysis": result}

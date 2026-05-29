@@ -31,6 +31,7 @@ interface FormState {
   longitude?: number;
   scanImages: File[];
   scanPreviews: string[];
+  scanLabels: string[];
 }
 
 interface ScanCapture {
@@ -42,6 +43,79 @@ interface ScanCapture {
   faceWidth: number;   // face bounding-box width as a fraction of the frame
   centered: boolean;   // face roughly centered in the frame
   yaw: number;         // head turn, ~ -0.5..0.5, 0 = facing front
+  landmarks?: { x: number; y: number }[]; // normalized face landmarks for zone crops
+}
+
+// MediaPipe FaceMesh landmark indices grouping facial zones for high-res close-ups
+const REGION_INDICES: { label: string; idx: number[] }[] = [
+  { label: "forehead / T-zone close-up", idx: [10, 151, 109, 338, 67, 297, 9, 8, 168, 6, 197, 195, 5, 4, 1] },
+  { label: "left cheek close-up", idx: [50, 101, 36, 206, 205, 187, 123, 116, 117, 118, 147] },
+  { label: "right cheek close-up", idx: [280, 330, 266, 426, 425, 411, 352, 345, 346, 347, 376] },
+];
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// Crop high-resolution facial zones from a frontal capture using its landmarks.
+async function buildRegionCrops(
+  capture: ScanCapture,
+): Promise<{ file: File; preview: string; label: string }[]> {
+  const lm = capture.landmarks;
+  if (!lm || lm.length === 0) return [];
+  let img: HTMLImageElement;
+  try {
+    img = await loadImage(capture.preview);
+  } catch {
+    return [];
+  }
+  const W = img.naturalWidth || img.width;
+  const H = img.naturalHeight || img.height;
+  if (!W || !H) return [];
+
+  const crops: { file: File; preview: string; label: string }[] = [];
+  for (const region of REGION_INDICES) {
+    let minX = 1, maxX = 0, minY = 1, maxY = 0;
+    for (const i of region.idx) {
+      const p = lm[i];
+      if (!p) continue;
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    if (maxX <= minX || maxY <= minY) continue;
+
+    const padX = (maxX - minX) * 0.25;
+    const padY = (maxY - minY) * 0.25;
+    const sx = Math.max(0, minX - padX) * W;
+    const sy = Math.max(0, minY - padY) * H;
+    const sw = Math.min(1, maxX + padX) * W - sx;
+    const sh = Math.min(1, maxY + padY) * H - sy;
+    if (sw < 8 || sh < 8) continue;
+
+    // Upscale small crops so the model can read fine detail (pores, texture).
+    const scale = Math.min(3, Math.max(1, 360 / Math.min(sw, sh)));
+    const dw = Math.round(sw * scale);
+    const dh = Math.round(sh * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = dw;
+    canvas.height = dh;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, dw, dh);
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.92));
+    if (!blob) continue;
+    const safe = region.label.replace(/[^a-z]+/gi, "-");
+    const file = new File([blob], `${safe}-${Date.now()}.jpg`, { type: "image/jpeg" });
+    crops.push({ file, preview: URL.createObjectURL(blob), label: region.label });
+  }
+  return crops;
 }
 
 export default function AnalyzePage() {
@@ -68,7 +142,7 @@ export default function AnalyzePage() {
         const saved = sessionStorage.getItem("skinsense_form");
         if (saved) {
           const parsed = JSON.parse(saved);
-          return { ...parsed, scanImages: [], scanPreviews: [] };
+          return { ...parsed, scanImages: [], scanPreviews: [], scanLabels: [] };
         }
       } catch {}
     }
@@ -83,37 +157,40 @@ export default function AnalyzePage() {
       useGPS: false,
       scanImages: [],
       scanPreviews: [],
+      scanLabels: [],
     };
   });
 
   const update = useCallback((patch: Partial<FormState>) => setForm((f) => {
     const next = { ...f, ...patch };
     try {
-      const { scanImages, scanPreviews, ...saveable } = next;
+      const { scanImages, scanPreviews, scanLabels, ...saveable } = next;
       void scanImages;
       void scanPreviews;
+      void scanLabels;
       sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
     } catch {}
     return next;
   }), []);
 
-  const advanceToPreferences = useCallback((captures: ScanCapture[]) => {
-    const scanImages = captures.map((capture) => capture.file);
-    const scanPreviews = captures.map((capture) => capture.preview);
-
-    setForm((f) => {
-      const next = { ...f, step: 2, scanImages, scanPreviews };
-      try {
-        const { scanImages: _scanImages, scanPreviews: _scanPreviews, ...saveable } = next;
-        void _scanImages;
-        void _scanPreviews;
-        sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
-      } catch {}
-      return next;
-    });
-    setScanCompleted(true);
-    setScanning(false);
-  }, []);
+  const advanceToPreferences = useCallback(
+    (scanImages: File[], scanPreviews: string[], scanLabels: string[]) => {
+      setForm((f) => {
+        const next = { ...f, step: 2, scanImages, scanPreviews, scanLabels };
+        try {
+          const { scanImages: _i, scanPreviews: _p, scanLabels: _l, ...saveable } = next;
+          void _i;
+          void _p;
+          void _l;
+          sessionStorage.setItem("skinsense_form", JSON.stringify(saveable));
+        } catch {}
+        return next;
+      });
+      setScanCompleted(true);
+      setScanning(false);
+    },
+    [],
+  );
 
   const ensureFaceLandmarker = useCallback(async () => {
     if (faceLandmarkerRef.current) return faceLandmarkerRef.current;
@@ -181,8 +258,8 @@ export default function AnalyzePage() {
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2) return null;
 
-    const width = 640;
-    const height = Math.round((video.videoHeight / video.videoWidth) * width) || 480;
+    const width = 960;
+    const height = Math.round((video.videoHeight / video.videoWidth) * width) || 720;
     canvas.width = width;
     canvas.height = height;
 
@@ -193,12 +270,14 @@ export default function AnalyzePage() {
     const metrics = scoreFrame(ctx, width, height);
 
     const face = { faceDetected: false, faceWidth: 0, centered: false, yaw: 0 };
+    let faceLandmarks: { x: number; y: number }[] | undefined;
     const landmarker = faceLandmarkerRef.current;
     if (landmarker) {
       try {
         const res = landmarker.detectForVideo(video, performance.now());
         const lm = res.faceLandmarks?.[0];
         if (lm && lm.length) {
+          faceLandmarks = lm.map((p) => ({ x: p.x, y: p.y }));
           let minX = 1, maxX = 0, minY = 1, maxY = 0;
           for (const p of lm) {
             if (p.x < minX) minX = p.x;
@@ -227,7 +306,7 @@ export default function AnalyzePage() {
           return;
         }
         const file = new File([blob], `face-scan-${Date.now()}.jpg`, { type: "image/jpeg" });
-        resolve({ file, preview: URL.createObjectURL(blob), ...metrics, ...face });
+        resolve({ file, preview: URL.createObjectURL(blob), ...metrics, ...face, landmarks: faceLandmarks });
       }, "image/jpeg", 0.9);
     });
   };
@@ -326,6 +405,8 @@ export default function AnalyzePage() {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
         audio: false,
       });
@@ -389,7 +470,21 @@ export default function AnalyzePage() {
       setScanHint("");
       setScanProgress(100);
       form.scanPreviews.forEach((preview) => URL.revokeObjectURL(preview));
-      advanceToPreferences(best);
+
+      const phaseLabels = ["front face", "left profile", "right profile"];
+      const images = best.map((capture) => capture.file);
+      const previews = best.map((capture) => capture.preview);
+      const labels = best.map((_, i) => phaseLabels[i] ?? `scan ${i + 1}`);
+
+      // High-res close-ups of facial zones, cropped from the frontal frame.
+      const crops = await buildRegionCrops(best[0]);
+      for (const crop of crops) {
+        images.push(crop.file);
+        previews.push(crop.preview);
+        labels.push(crop.label);
+      }
+
+      advanceToPreferences(images, previews, labels);
       scanSucceeded = true;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Couldn't access the camera. Please check your browser permissions and try again.");
@@ -512,6 +607,7 @@ export default function AnalyzePage() {
         latitude: form.useGPS ? form.latitude : undefined,
         longitude: form.useGPS ? form.longitude : undefined,
         images: form.scanImages,
+        imageLabels: form.scanLabels,
       });
 
       setProgress(100);
