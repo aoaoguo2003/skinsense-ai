@@ -56,8 +56,7 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-6 text-base md:text-lg text-white/70 max-w-xl leading-relaxed">
-            用摄像头扫描面部，告诉我们你的产品偏好，AI 即刻分析肤质、检测成分冲突，
-            并结合当地天气推荐最适合你的护肤与彩妆产品。
+            扫描面部，告诉我们你的产品偏好，即刻为您分析肤质，检测成分冲突，个性化为您推荐最适合您的护肤与彩妆产品。
           </p>
 
           <Link
