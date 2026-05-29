@@ -325,10 +325,18 @@ export default function AnalyzePage() {
   }, [router]);
 
   useEffect(() => {
-    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
-    if (nav?.type === "reload") {
-      router.replace("/");
-    }
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (!nav || nav.type !== "reload") return;
+    // Only bounce home when *this* page was hard-reloaded (its in-memory File objects
+    // are gone). The navigation entry describes the document load and is stale across
+    // client-side route changes, so check the URL that was actually loaded — otherwise
+    // a reload of the home page would wrongly bounce a later client nav into /analyze.
+    try {
+      const loadedPath = new URL(nav.name).pathname.replace(/\/+$/, "");
+      if (loadedPath.endsWith("/analyze")) {
+        router.replace("/");
+      }
+    } catch {}
   }, [router]);
 
   useEffect(() => {
