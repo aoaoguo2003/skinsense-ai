@@ -86,11 +86,18 @@ export interface AnalysisResult {
 
 export interface AnalyzeResponse {
   status: string;
+  trace_id?: string;
   weather: WeatherData | null;
   analysis: AnalysisResult;
   retrieval?: {
     enabled: boolean;
     candidate_count: number;
     grounded_recommendation_count: number;
+    error?: string | null;
+  };
+  workflow?: {
+    engine: "langgraph";
+    model_attempts: number;
+    validation_errors: string[];
   };
 }

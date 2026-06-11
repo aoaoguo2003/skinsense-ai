@@ -27,3 +27,7 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: LANGSMITH_TRACING
+        value: "false"
+      - key: LANGSMITH_PROJECT
+        value: skinsense-ai

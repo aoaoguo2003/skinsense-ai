@@ -37,6 +37,7 @@ def _build_analysis_prompt(
     image_count: int,
     image_labels: Optional[list[str]] = None,
     rag_products: Optional[list[dict]] = None,
+    validation_feedback: Optional[list[str]] = None,
 ) -> str:
     parts = []
 
@@ -82,6 +83,14 @@ def _build_analysis_prompt(
             "- Never invent a product, price, ingredient, or purchase URL.\n"
             "- If fewer products are suitable, return fewer recommendations.\n"
             "- Respect the user's avoided ingredients and fragrance preference."
+        )
+
+    if validation_feedback:
+        parts.append(
+            "\n## Previous Output Validation Errors\n"
+            "A previous draft failed deterministic validation. Correct every issue below "
+            "without changing valid observations:\n"
+            + "\n".join(f"- {error}" for error in validation_feedback)
         )
 
     parts.append("""
@@ -167,6 +176,7 @@ async def analyze_with_claude(
     image_payloads: Optional[list[tuple[bytes, str]]] = None,
     image_labels: Optional[list[str]] = None,
     rag_products: Optional[list[dict]] = None,
+    validation_feedback: Optional[list[str]] = None,
 ) -> dict:
     import anthropic
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -181,6 +191,7 @@ async def analyze_with_claude(
         len(image_payloads),
         image_labels,
         rag_products,
+        validation_feedback,
     )
 
     content = []
@@ -238,6 +249,7 @@ async def analyze_with_openai(
     image_payloads: Optional[list[tuple[bytes, str]]] = None,
     image_labels: Optional[list[str]] = None,
     rag_products: Optional[list[dict]] = None,
+    validation_feedback: Optional[list[str]] = None,
 ) -> dict:
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=settings.openai_api_key)
@@ -252,6 +264,7 @@ async def analyze_with_openai(
         len(image_payloads),
         image_labels,
         rag_products,
+        validation_feedback,
     )
 
     content = []
@@ -286,6 +299,7 @@ async def analyze_skin(
     image_payloads: Optional[list[tuple[bytes, str]]] = None,
     image_labels: Optional[list[str]] = None,
     rag_products: Optional[list[dict]] = None,
+    validation_feedback: Optional[list[str]] = None,
 ) -> dict:
     if settings.llm_provider == "openai":
         return await analyze_with_openai(
@@ -297,6 +311,7 @@ async def analyze_skin(
             image_payloads,
             image_labels,
             rag_products,
+            validation_feedback,
         )
     return await analyze_with_claude(
         questionnaire,
@@ -307,4 +322,5 @@ async def analyze_skin(
         image_payloads,
         image_labels,
         rag_products,
+        validation_feedback,
     )

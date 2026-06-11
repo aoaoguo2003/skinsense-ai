@@ -61,7 +61,7 @@ async def lifespan(_app: FastAPI):
         bootstrap_task.cancel()
 
 
-app = FastAPI(title="SkinSense AI", version="1.1.0", lifespan=lifespan)
+app = FastAPI(title="SkinSense AI", version="1.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -81,4 +81,4 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "workflow": "langgraph"}

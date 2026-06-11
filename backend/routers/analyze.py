@@ -2,20 +2,13 @@ from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import Optional
 import json
-import logging
 import os
 import httpx
 
-from services.llm_service import analyze_skin
-from services.product_rag import (
-    ground_recommendations,
-    rag_is_configured,
-    retrieve_product_candidates,
-)
-from services.weather_service import get_weather_by_city, get_weather_by_coords
+from services.product_rag import rag_is_configured
+from workflows.skin_analysis import run_analysis_workflow
 
 router = APIRouter(prefix="/api", tags=["analyze"])
-logger = logging.getLogger(__name__)
 
 
 @router.post("/analyze")
@@ -50,13 +43,6 @@ async def analyze_endpoint(
         except json.JSONDecodeError:
             products_list = [p.strip() for p in current_products.split(",") if p.strip()]
 
-    # Fetch weather
-    weather = None
-    if latitude is not None and longitude is not None:
-        weather = await get_weather_by_coords(latitude, longitude)
-    elif city:
-        weather = await get_weather_by_city(city)
-
     # Read image bytes. Keep the legacy single-image field, but prefer the
     # scanner's multi-image payload when it is provided.
     image_payloads = []
@@ -81,37 +67,33 @@ async def analyze_endpoint(
             raise HTTPException(status_code=413, detail="Images too large (max 20MB total)")
         image_payloads.append((image_bytes, upload.content_type or "image/jpeg"))
 
-    # Backward compatibility for the service while the app migrates to multi-image scans.
-    image_bytes = image_payloads[0][0] if image_payloads else None
-    image_media_type = image_payloads[0][1] if image_payloads else None
-
-    rag_candidates = []
-    if rag_is_configured():
-        try:
-            rag_candidates = await retrieve_product_candidates(q_data, weather)
-        except Exception:
-            logger.exception("Product RAG retrieval failed; continuing without catalog grounding")
-
-    result = await analyze_skin(
+    workflow = await run_analysis_workflow(
         questionnaire=q_data,
-        weather=weather,
         current_products=products_list,
-        image_bytes=image_bytes,
-        image_media_type=image_media_type,
+        city=city,
+        latitude=latitude,
+        longitude=longitude,
         image_payloads=image_payloads,
         image_labels=labels_list,
-        rag_products=[candidate.to_prompt_dict() for candidate in rag_candidates],
     )
-    result = ground_recommendations(result, rag_candidates)
+    result = workflow["final_analysis"]
+    rag_candidates = workflow.get("rag_candidates", [])
 
     return {
         "status": "ok",
-        "weather": weather,
+        "trace_id": workflow["trace_id"],
+        "weather": workflow.get("weather"),
         "analysis": result,
         "retrieval": {
             "enabled": rag_is_configured(),
             "candidate_count": len(rag_candidates),
             "grounded_recommendation_count": len(result.get("product_recommendations", [])),
+            "error": workflow.get("retrieval_error"),
+        },
+        "workflow": {
+            "engine": "langgraph",
+            "model_attempts": workflow.get("model_attempts", 0),
+            "validation_errors": workflow.get("validation_errors", []),
         },
     }
 
