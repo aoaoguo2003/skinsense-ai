@@ -23,6 +23,7 @@ from workflows.skin_analysis import run_analysis_workflow
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = BACKEND_DIR / "evaluation" / "datasets" / "core_cases.json"
 DEFAULT_OUTPUT_DIR = BACKEND_DIR / "evaluation" / "reports"
+DEFAULT_CHECKPOINT = DEFAULT_OUTPUT_DIR / "live-progress.json"
 
 
 def load_dataset(path: Path) -> dict[str, Any]:
@@ -144,11 +145,23 @@ async def run_live_dataset(
     limit: Optional[int],
     runs: Optional[int],
     base_url: Optional[str],
+    checkpoint_path: Optional[Path] = None,
+    resume: bool = False,
 ) -> list[dict[str, Any]]:
     cases = select_cases(dataset, limit=limit, runs=runs)
     results = []
+    if resume and checkpoint_path and checkpoint_path.exists():
+        checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        results = checkpoint.get("results", [])
+        if len(results) > len(cases):
+            raise ValueError("Checkpoint has more results than requested runs")
+
+    start_index = len(results)
     async with httpx.AsyncClient(timeout=300) as client:
-        for index, case in enumerate(cases, start=1):
+        for index, case in enumerate(
+            cases[start_index:],
+            start=start_index + 1,
+        ):
             print(
                 f"[{index}/{len(cases)}] Evaluating {case['id']}...",
                 flush=True,
@@ -171,6 +184,23 @@ async def run_live_dataset(
             if workflow is not None:
                 result["raw_workflow"] = _serialize_workflow(workflow)
             results.append(result)
+            if checkpoint_path:
+                checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+                checkpoint_path.write_text(
+                    json.dumps(
+                        {
+                            "dataset": dataset.get("name"),
+                            "dataset_version": dataset.get("version"),
+                            "base_url": base_url,
+                            "requested_runs": len(cases),
+                            "completed_runs": len(results),
+                            "results": results,
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    encoding="utf-8",
+                )
     return results
 
 
@@ -292,6 +322,17 @@ def parse_args() -> argparse.Namespace:
         "--base-url",
         help="Evaluate a deployed SkinSense backend instead of local services.",
     )
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=DEFAULT_CHECKPOINT,
+        help="Save live progress after every completed request.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume a live run from the checkpoint file.",
+    )
     return parser.parse_args()
 
 
@@ -316,6 +357,8 @@ async def async_main() -> int:
             limit=args.limit,
             runs=args.runs,
             base_url=args.base_url,
+            checkpoint_path=args.checkpoint,
+            resume=args.resume,
         )
 
     report = build_report(

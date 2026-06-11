@@ -45,6 +45,14 @@ Run 30 evaluations against the deployed Render backend:
 python -m evaluation.runner --mode live --runs 30 --base-url https://your-service.onrender.com
 ```
 
+Live runs save `evaluation/reports/live-progress.json` after every request. If
+the terminal or network is interrupted, resume without repeating completed
+calls:
+
+```powershell
+python -m evaluation.runner --mode live --runs 30 --base-url https://your-service.onrender.com --resume
+```
+
 Use a small smoke run while developing:
 
 ```powershell

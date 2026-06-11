@@ -12,6 +12,7 @@ from evaluation.report import render_markdown
 from evaluation.runner import (
     build_report,
     load_dataset,
+    run_live_dataset,
     save_report,
     select_cases,
     score_replay,
@@ -269,6 +270,37 @@ class EvaluationDatasetTests(unittest.TestCase):
             [case["id"] for case in selected],
             ["a", "b", "a", "b", "a"],
         )
+
+    def test_live_run_resumes_without_repeating_checkpointed_results(self):
+        dataset = {
+            "name": "test",
+            "version": "1",
+            "cases": [{"id": "a", "questionnaire": {}}],
+        }
+        checkpoint = {
+            "requested_runs": 1,
+            "completed_runs": 1,
+            "results": [{"case_id": "a", "success": True}],
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = Path(directory) / "progress.json"
+            checkpoint_path.write_text(
+                json.dumps(checkpoint),
+                encoding="utf-8",
+            )
+            results = __import__("asyncio").run(
+                run_live_dataset(
+                    dataset,
+                    limit=None,
+                    runs=1,
+                    base_url="https://example.invalid",
+                    checkpoint_path=checkpoint_path,
+                    resume=True,
+                )
+            )
+
+        self.assertEqual(results, checkpoint["results"])
 
     def test_dataset_requires_unique_case_ids(self):
         with tempfile.TemporaryDirectory() as directory:
