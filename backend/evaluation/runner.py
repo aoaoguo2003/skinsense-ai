@@ -8,6 +8,7 @@ from time import perf_counter
 from typing import Any, Optional
 from uuid import uuid4
 
+import httpx
 from dotenv import load_dotenv
 
 from evaluation.metrics import (
@@ -68,25 +69,100 @@ async def run_live_case(case: dict[str, Any]) -> tuple[Optional[dict[str, Any]],
         )
 
 
+async def run_remote_case(
+    client: httpx.AsyncClient,
+    base_url: str,
+    case: dict[str, Any],
+) -> tuple[Optional[dict[str, Any]], float, Optional[str]]:
+    started_at = perf_counter()
+    location = case.get("location", {})
+    form_data = {
+        "questionnaire": json.dumps(case["questionnaire"]),
+    }
+    if case.get("current_products"):
+        form_data["current_products"] = json.dumps(case["current_products"])
+    for key in ("city", "latitude", "longitude"):
+        value = location.get(key)
+        if value is not None:
+            form_data[key] = str(value)
+
+    try:
+        response = await client.post(
+            f"{base_url.rstrip('/')}/api/analyze",
+            data=form_data,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        retrieval = payload.get("retrieval", {})
+        workflow_metadata = payload.get("workflow", {})
+        workflow = {
+            "trace_id": payload.get("trace_id"),
+            "weather": payload.get("weather"),
+            "final_analysis": payload.get("analysis") or {},
+            "rag_candidates": [
+                ProductCandidate(**candidate)
+                for candidate in retrieval.get("recommendation_evidence", [])
+            ],
+            "retrieval_error": retrieval.get("error"),
+            "validation_errors": workflow_metadata.get(
+                "validation_errors",
+                [],
+            ),
+            "model_attempts": workflow_metadata.get("model_attempts", 0),
+            "timing_events": workflow_metadata.get("timing_events", []),
+        }
+        return workflow, (perf_counter() - started_at) * 1000, None
+    except Exception as exc:
+        return None, (perf_counter() - started_at) * 1000, (
+            f"{type(exc).__name__}: {exc}"
+        )
+
+
+def select_cases(
+    dataset: dict[str, Any],
+    *,
+    limit: Optional[int],
+    runs: Optional[int],
+) -> list[dict[str, Any]]:
+    cases = dataset["cases"][:limit] if limit else dataset["cases"]
+    if not runs:
+        return cases
+    return [cases[index % len(cases)] for index in range(runs)]
+
+
 async def run_live_dataset(
     dataset: dict[str, Any],
     *,
     limit: Optional[int],
+    runs: Optional[int],
+    base_url: Optional[str],
 ) -> list[dict[str, Any]]:
-    cases = dataset["cases"][:limit] if limit else dataset["cases"]
+    cases = select_cases(dataset, limit=limit, runs=runs)
     results = []
-    for index, case in enumerate(cases, start=1):
-        print(f"[{index}/{len(cases)}] Evaluating {case['id']}...")
-        workflow, latency_ms, error = await run_live_case(case)
-        result = score_case(
-            case,
-            workflow,
-            latency_ms=latency_ms,
-            error=error,
-        )
-        if workflow is not None:
-            result["raw_workflow"] = _serialize_workflow(workflow)
-        results.append(result)
+    async with httpx.AsyncClient(timeout=300) as client:
+        for index, case in enumerate(cases, start=1):
+            print(
+                f"[{index}/{len(cases)}] Evaluating {case['id']}...",
+                flush=True,
+            )
+            if base_url:
+                workflow, latency_ms, error = await run_remote_case(
+                    client,
+                    base_url,
+                    case,
+                )
+            else:
+                workflow, latency_ms, error = await run_live_case(case)
+            result = score_case(
+                case,
+                workflow,
+                latency_ms=latency_ms,
+                error=error,
+            )
+            result["sample_index"] = index
+            if workflow is not None:
+                result["raw_workflow"] = _serialize_workflow(workflow)
+            results.append(result)
     return results
 
 
@@ -199,6 +275,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--limit", type=int)
+    parser.add_argument(
+        "--runs",
+        type=int,
+        help="Total live executions. Cases repeat in dataset order.",
+    )
+    parser.add_argument(
+        "--base-url",
+        help="Evaluate a deployed SkinSense backend instead of local services.",
+    )
     return parser.parse_args()
 
 
@@ -218,7 +303,12 @@ async def async_main() -> int:
             raise ValueError("--input is required in replay mode")
         results = score_replay(dataset, args.input)
     else:
-        results = await run_live_dataset(dataset, limit=args.limit)
+        results = await run_live_dataset(
+            dataset,
+            limit=args.limit,
+            runs=args.runs,
+            base_url=args.base_url,
+        )
 
     report = build_report(
         dataset=dataset,

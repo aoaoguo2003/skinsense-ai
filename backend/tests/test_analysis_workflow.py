@@ -146,6 +146,7 @@ class AnalysisApiTests(unittest.TestCase):
             "final_analysis": make_analysis(""),
             "model_attempts": 1,
             "validation_errors": [],
+            "timing_events": [],
         }
 
         with (
@@ -166,6 +167,10 @@ class AnalysisApiTests(unittest.TestCase):
         self.assertEqual(body["workflow"]["engine"], "langgraph")
         self.assertEqual(body["workflow"]["model_attempts"], 1)
         self.assertEqual(body["workflow"]["timing_events"], [])
+        self.assertEqual(
+            body["retrieval"]["recommendation_evidence"],
+            [],
+        )
 
 
 if __name__ == "__main__":

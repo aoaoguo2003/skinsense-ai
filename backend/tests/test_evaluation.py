@@ -13,6 +13,7 @@ from evaluation.runner import (
     build_report,
     load_dataset,
     save_report,
+    select_cases,
     score_replay,
 )
 from services.product_rag import ProductCandidate
@@ -227,6 +228,21 @@ class EvaluationMetricTests(unittest.TestCase):
 
 
 class EvaluationDatasetTests(unittest.TestCase):
+    def test_select_cases_repeats_dataset_to_requested_run_count(self):
+        dataset = {
+            "cases": [
+                {"id": "a", "questionnaire": {}},
+                {"id": "b", "questionnaire": {}},
+            ]
+        }
+
+        selected = select_cases(dataset, limit=None, runs=5)
+
+        self.assertEqual(
+            [case["id"] for case in selected],
+            ["a", "b", "a", "b", "a"],
+        )
+
     def test_dataset_requires_unique_case_ids(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "dataset.json"

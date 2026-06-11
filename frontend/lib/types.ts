@@ -93,6 +93,24 @@ export interface AnalyzeResponse {
     enabled: boolean;
     candidate_count: number;
     grounded_recommendation_count: number;
+    recommendation_evidence?: Array<{
+      catalog_id: string;
+      source: string;
+      brand: string;
+      name: string;
+      category: string;
+      description: string;
+      ingredients: string[];
+      texture?: string | null;
+      fragrance_free?: boolean | null;
+      price_min_usd?: number | null;
+      price_max_usd?: number | null;
+      price_tier?: string | null;
+      markets: string[];
+      product_url?: string | null;
+      image_url?: string | null;
+      similarity?: number;
+    }>;
     error?: string | null;
   };
   workflow?: {

@@ -78,6 +78,15 @@ async def analyze_endpoint(
     )
     result = workflow["final_analysis"]
     rag_candidates = workflow.get("rag_candidates", [])
+    recommended_ids = {
+        str(item.get("catalog_id") or "")
+        for item in result.get("product_recommendations", [])
+    }
+    recommendation_evidence = [
+        candidate.to_prompt_dict()
+        for candidate in rag_candidates
+        if candidate.catalog_id in recommended_ids
+    ]
 
     return {
         "status": "ok",
@@ -88,6 +97,7 @@ async def analyze_endpoint(
             "enabled": rag_is_configured(),
             "candidate_count": len(rag_candidates),
             "grounded_recommendation_count": len(result.get("product_recommendations", [])),
+            "recommendation_evidence": recommendation_evidence,
             "error": workflow.get("retrieval_error"),
         },
         "workflow": {

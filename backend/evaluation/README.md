@@ -39,6 +39,12 @@ Run the real workflow:
 python -m evaluation.runner --mode live
 ```
 
+Run 30 evaluations against the deployed Render backend:
+
+```powershell
+python -m evaluation.runner --mode live --runs 30 --base-url https://your-service.onrender.com
+```
+
 Use a small smoke run while developing:
 
 ```powershell

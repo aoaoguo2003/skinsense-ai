@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import hashlib
+import logging
 import re
 from typing import Any
 
@@ -20,6 +21,7 @@ DEFAULT_CATEGORIES = [
     "en:anti-aging-face-care-products",
     "en:face-masks",
 ]
+logger = logging.getLogger(__name__)
 FIELDS = ",".join(
     [
         "code",
@@ -114,9 +116,10 @@ async def fetch_category(
     category: str,
     pages: int,
     page_size: int,
+    start_page: int = 1,
 ) -> list[dict[str, Any]]:
     products = []
-    for page in range(1, pages + 1):
+    for page in range(start_page, start_page + pages):
         response = await client.get(
             API_URL,
             params={
@@ -135,22 +138,44 @@ async def fetch_category(
 async def run(limit: int, pages: int, page_size: int) -> None:
     await initialize_schema()
 
-    raw_products = []
+    normalized = {}
     async with httpx.AsyncClient(
         timeout=30,
         headers={"User-Agent": USER_AGENT},
         follow_redirects=True,
     ) as client:
         for category in DEFAULT_CATEGORIES:
-            raw_products.extend(await fetch_category(client, category, pages, page_size))
+            for page in range(1, pages + 1):
+                try:
+                    raw_products = await fetch_category(
+                        client,
+                        category,
+                        pages=1,
+                        page_size=page_size,
+                        start_page=page,
+                    )
+                except (httpx.HTTPError, ValueError) as exc:
+                    logger.warning(
+                        "Skipping Open Beauty Facts category %s page %s: %s",
+                        category,
+                        page,
+                        type(exc).__name__,
+                    )
+                    continue
 
-    normalized = {}
-    for raw_product in raw_products:
-        product = normalize_product(raw_product)
-        if product:
-            normalized[product["id"]] = product
-        if len(normalized) >= limit:
-            break
+                for raw_product in raw_products:
+                    product = normalize_product(raw_product)
+                    if product:
+                        normalized[product["id"]] = product
+                    if len(normalized) >= limit:
+                        break
+                if len(normalized) >= limit:
+                    break
+            if len(normalized) >= limit:
+                break
+
+    if not normalized:
+        raise RuntimeError("Open Beauty Facts returned no importable products")
 
     imported = await upsert_products(list(normalized.values()))
     print(f"Imported {imported} products with embeddings.")

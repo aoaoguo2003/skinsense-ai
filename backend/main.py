@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -19,32 +20,87 @@ from services.product_rag import (
 
 logger = logging.getLogger(__name__)
 
+bootstrap_status = {
+    "state": "idle",
+    "attempts": 0,
+    "imported": 0,
+    "last_error": None,
+    "updated_at": None,
+}
+
+
+def _update_bootstrap_status(**updates) -> None:
+    bootstrap_status.update(
+        updates,
+        updated_at=datetime.now(timezone.utc).isoformat(),
+    )
+
 
 async def bootstrap_product_catalog() -> None:
     settings = get_rag_settings()
     if settings.rag_bootstrap_limit <= 0:
+        _update_bootstrap_status(state="disabled")
         return
 
     try:
-        if await catalog_product_count() > 0:
+        existing_count = await catalog_product_count()
+    except Exception as exc:
+        _update_bootstrap_status(
+            state="failed",
+            last_error=type(exc).__name__,
+        )
+        logger.exception("Unable to inspect product catalog before bootstrap")
+        return
+    if existing_count > 0:
+        _update_bootstrap_status(
+            state="ready",
+            imported=existing_count,
+            last_error=None,
+        )
+        return
+
+    from scripts.import_open_beauty_facts import run
+
+    for attempt in range(1, 4):
+        _update_bootstrap_status(
+            state="running",
+            attempts=attempt,
+            last_error=None,
+        )
+        try:
+            logger.info(
+                "Product catalog is empty; importing %s Open Beauty Facts products "
+                "(attempt %s/3)",
+                settings.rag_bootstrap_limit,
+                attempt,
+            )
+            await run(
+                limit=settings.rag_bootstrap_limit,
+                pages=max(3, (settings.rag_bootstrap_limit + 99) // 100),
+                page_size=100,
+            )
+            imported_count = await catalog_product_count()
+            _update_bootstrap_status(
+                state="ready",
+                imported=imported_count,
+                last_error=None,
+            )
+            logger.info(
+                "Product catalog bootstrap completed with %s products",
+                imported_count,
+            )
             return
-
-        from scripts.import_open_beauty_facts import run
-
-        logger.info(
-            "Product catalog is empty; importing %s Open Beauty Facts products",
-            settings.rag_bootstrap_limit,
-        )
-        await run(
-            limit=settings.rag_bootstrap_limit,
-            pages=max(3, (settings.rag_bootstrap_limit + 99) // 100),
-            page_size=100,
-        )
-        logger.info("Product catalog bootstrap completed")
-    except Exception:
-        logger.exception(
-            "Product catalog bootstrap failed; the service will continue without RAG products"
-        )
+        except Exception as exc:
+            _update_bootstrap_status(
+                state="retrying" if attempt < 3 else "failed",
+                last_error=type(exc).__name__,
+            )
+            logger.exception(
+                "Product catalog bootstrap attempt %s failed",
+                attempt,
+            )
+            if attempt < 3:
+                await asyncio.sleep(10 * attempt)
 
 
 @asynccontextmanager
@@ -81,4 +137,8 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "workflow": "langgraph"}
+    return {
+        "status": "ok",
+        "workflow": "langgraph",
+        "catalog_bootstrap": bootstrap_status,
+    }
