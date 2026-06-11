@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Sparkles, CloudSun, FlaskConical, AlertTriangle, CheckCircle2,
   Sun, Moon, ArrowLeft, Leaf, DollarSign, ShoppingBag, Target,
-  Download, FileImage, FileText, Loader2
+  Download, FileImage, FileText, Loader2, ExternalLink
 } from "lucide-react";
 import { AnalyzeResponse, ProductRecommendation, IngredientConflict, ConcernSolution } from "@/lib/types";
 import { searchProductImage } from "@/lib/api";
@@ -102,6 +102,17 @@ function ProductCard({ product }: { product: ProductRecommendation }) {
         <p className="text-xs text-gray-400 mt-2">
           <span className="font-medium text-gray-500">Usage: </span>{product.usage}
         </p>
+        {product.product_url && (
+          <a
+            href={product.product_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-stone-900"
+          >
+            View catalog source
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
       </div>
 
       <button

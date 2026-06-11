@@ -25,10 +25,13 @@ export interface Ingredient {
 }
 
 export interface ProductRecommendation {
+  catalog_id?: string;
   category: string;
   product_name: string;
   brand: string;
   price_range: string;
+  product_url?: string;
+  source?: string;
   why_recommended: string;
   key_ingredients: Ingredient[];
   usage: string;
@@ -85,4 +88,9 @@ export interface AnalyzeResponse {
   status: string;
   weather: WeatherData | null;
   analysis: AnalysisResult;
+  retrieval?: {
+    enabled: boolean;
+    candidate_count: number;
+    grounded_recommendation_count: number;
+  };
 }

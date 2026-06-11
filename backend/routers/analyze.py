@@ -2,13 +2,20 @@ from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import Optional
 import json
+import logging
 import os
 import httpx
 
 from services.llm_service import analyze_skin
+from services.product_rag import (
+    ground_recommendations,
+    rag_is_configured,
+    retrieve_product_candidates,
+)
 from services.weather_service import get_weather_by_city, get_weather_by_coords
 
 router = APIRouter(prefix="/api", tags=["analyze"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/analyze")
@@ -78,6 +85,13 @@ async def analyze_endpoint(
     image_bytes = image_payloads[0][0] if image_payloads else None
     image_media_type = image_payloads[0][1] if image_payloads else None
 
+    rag_candidates = []
+    if rag_is_configured():
+        try:
+            rag_candidates = await retrieve_product_candidates(q_data, weather)
+        except Exception:
+            logger.exception("Product RAG retrieval failed; continuing without catalog grounding")
+
     result = await analyze_skin(
         questionnaire=q_data,
         weather=weather,
@@ -86,9 +100,20 @@ async def analyze_endpoint(
         image_media_type=image_media_type,
         image_payloads=image_payloads,
         image_labels=labels_list,
+        rag_products=[candidate.to_prompt_dict() for candidate in rag_candidates],
     )
+    result = ground_recommendations(result, rag_candidates)
 
-    return {"status": "ok", "weather": weather, "analysis": result}
+    return {
+        "status": "ok",
+        "weather": weather,
+        "analysis": result,
+        "retrieval": {
+            "enabled": rag_is_configured(),
+            "candidate_count": len(rag_candidates),
+            "grounded_recommendation_count": len(result.get("product_recommendations", [])),
+        },
+    }
 
 
 @router.get("/image")
