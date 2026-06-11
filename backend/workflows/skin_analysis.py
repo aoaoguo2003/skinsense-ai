@@ -1,6 +1,8 @@
 import copy
 import logging
-from typing import Any, Literal, Optional, TypedDict
+import operator
+from time import perf_counter
+from typing import Annotated, Any, Literal, Optional, TypedDict
 from uuid import uuid4
 
 from langchain_core.runnables import RunnableConfig, RunnableLambda
@@ -45,6 +47,7 @@ class AnalysisState(TypedDict, total=False):
     final_analysis: dict[str, Any]
     validation_errors: list[str]
     model_attempts: int
+    timing_events: Annotated[list[dict[str, Any]], operator.add]
 
 
 # Raw biometric images deliberately stay outside graph state so optional
@@ -53,6 +56,7 @@ _ephemeral_images: dict[str, list[tuple[bytes, str]]] = {}
 
 
 async def fetch_weather_node(state: AnalysisState) -> dict[str, Any]:
+    started_at = perf_counter()
     weather = None
     latitude = state.get("latitude")
     longitude = state.get("longitude")
@@ -60,19 +64,33 @@ async def fetch_weather_node(state: AnalysisState) -> dict[str, Any]:
         weather = await get_weather_by_coords(latitude, longitude)
     elif state.get("city"):
         weather = await get_weather_by_city(state["city"])
-    return {"weather": weather}
+    return {
+        "weather": weather,
+        "timing_events": [_timing_event("weather_context", started_at)],
+    }
 
 
 async def retrieve_products_node(state: AnalysisState) -> dict[str, Any]:
+    started_at = perf_counter()
     if not rag_is_configured():
-        return {"rag_candidates": [], "retrieval_error": None}
+        return {
+            "rag_candidates": [],
+            "retrieval_error": None,
+            "timing_events": [
+                _timing_event("product_retrieval", started_at, status="skipped")
+            ],
+        }
 
     try:
         candidates = await retrieve_product_candidates(
             state["questionnaire"],
             state.get("weather"),
         )
-        return {"rag_candidates": candidates, "retrieval_error": None}
+        return {
+            "rag_candidates": candidates,
+            "retrieval_error": None,
+            "timing_events": [_timing_event("product_retrieval", started_at)],
+        }
     except Exception as exc:
         logger.exception(
             "Product RAG retrieval failed for trace %s; continuing without grounding",
@@ -81,10 +99,19 @@ async def retrieve_products_node(state: AnalysisState) -> dict[str, Any]:
         return {
             "rag_candidates": [],
             "retrieval_error": type(exc).__name__,
+            "timing_events": [
+                _timing_event(
+                    "product_retrieval",
+                    started_at,
+                    status="degraded",
+                    detail=type(exc).__name__,
+                )
+            ],
         }
 
 
 async def _invoke_multimodal_model(state: AnalysisState) -> dict[str, Any]:
+    started_at = perf_counter()
     image_payloads = _ephemeral_images.get(state["trace_id"], [])
     candidates = state.get("rag_candidates", [])
     draft = await analyze_skin(
@@ -101,6 +128,13 @@ async def _invoke_multimodal_model(state: AnalysisState) -> dict[str, Any]:
     return {
         "analysis_draft": draft,
         "model_attempts": state.get("model_attempts", 0) + 1,
+        "timing_events": [
+            _timing_event(
+                "model_analysis",
+                started_at,
+                attempt=state.get("model_attempts", 0) + 1,
+            )
+        ],
     }
 
 
@@ -150,6 +184,7 @@ def validate_analysis(
 
 
 async def validate_node(state: AnalysisState) -> dict[str, Any]:
+    started_at = perf_counter()
     final_analysis, errors = validate_analysis(
         state.get("analysis_draft"),
         state.get("rag_candidates", []),
@@ -157,7 +192,35 @@ async def validate_node(state: AnalysisState) -> dict[str, Any]:
     return {
         "final_analysis": final_analysis,
         "validation_errors": errors,
+        "timing_events": [
+            _timing_event(
+                "result_validation",
+                started_at,
+                status="passed" if not errors else "failed",
+                attempt=state.get("model_attempts", 0),
+            )
+        ],
     }
+
+
+def _timing_event(
+    node: str,
+    started_at: float,
+    *,
+    status: str = "ok",
+    attempt: Optional[int] = None,
+    detail: Optional[str] = None,
+) -> dict[str, Any]:
+    event: dict[str, Any] = {
+        "node": node,
+        "duration_ms": round((perf_counter() - started_at) * 1000, 2),
+        "status": status,
+    }
+    if attempt is not None:
+        event["attempt"] = attempt
+    if detail:
+        event["detail"] = detail
+    return event
 
 
 def route_after_validation(state: AnalysisState) -> Literal["retry", "finish"]:
@@ -224,6 +287,7 @@ async def run_analysis_workflow(
                 "rag_candidates": [],
                 "validation_errors": [],
                 "model_attempts": 0,
+                "timing_events": [],
             },
             config={
                 "run_name": "skinsense_analysis_workflow",

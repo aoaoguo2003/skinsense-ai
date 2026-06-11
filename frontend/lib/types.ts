@@ -99,5 +99,12 @@ export interface AnalyzeResponse {
     engine: "langgraph";
     model_attempts: number;
     validation_errors: string[];
+    timing_events?: Array<{
+      node: string;
+      duration_ms: number;
+      status: string;
+      attempt?: number;
+      detail?: string;
+    }>;
   };
 }

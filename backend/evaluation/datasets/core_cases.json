@@ -1,0 +1,151 @@
+{
+  "name": "SkinSense Core Constraint Benchmark",
+  "version": "1.0.0",
+  "description": "Text-only benchmark for product grounding, user constraints, workflow reliability, and latency. It does not measure medical or visual diagnosis accuracy.",
+  "cases": [
+    {
+      "id": "dry-sensitive-budget",
+      "description": "Dry, sensitive skin with a strict budget and fragrance-free requirement.",
+      "questionnaire": {
+        "skin_concerns": ["dryness", "redness"],
+        "budget": "$0-$25 (per item)",
+        "preferred_texture": "cream",
+        "avoid_ingredients": "fragrance, alcohol",
+        "fragrance_preference": "Prefer fragrance-free"
+      },
+      "location": {"city": "London"}
+    },
+    {
+      "id": "oily-acne-gel",
+      "description": "Oily, blemish-prone skin preferring lightweight gel products.",
+      "questionnaire": {
+        "skin_concerns": ["oiliness", "acne", "visible pores"],
+        "budget": "$10-$40 (per item)",
+        "preferred_texture": "gel",
+        "avoid_ingredients": "coconut oil",
+        "fragrance_preference": "No preference"
+      },
+      "location": {"city": "New York"}
+    },
+    {
+      "id": "combination-dehydrated",
+      "description": "Combination skin with dehydration and no fragrance preference.",
+      "questionnaire": {
+        "skin_concerns": ["dehydration", "uneven texture"],
+        "budget": "$15-$60 (per item)",
+        "preferred_texture": "lotion",
+        "avoid_ingredients": "None",
+        "fragrance_preference": "No preference"
+      },
+      "location": {"city": "San Francisco"}
+    },
+    {
+      "id": "pigmentation-high-uv",
+      "description": "Hyperpigmentation concerns in a high-UV location.",
+      "questionnaire": {
+        "skin_concerns": ["hyperpigmentation", "dark spots"],
+        "budget": "$20-$75 (per item)",
+        "preferred_texture": "serum",
+        "avoid_ingredients": "hydroquinone",
+        "fragrance_preference": "Prefer fragrance-free"
+      },
+      "location": {"city": "Los Angeles"}
+    },
+    {
+      "id": "mature-dry",
+      "description": "Dry skin with fine lines and a richer texture preference.",
+      "questionnaire": {
+        "skin_concerns": ["fine lines", "loss of firmness", "dryness"],
+        "budget": "$25-$100 (per item)",
+        "preferred_texture": "cream",
+        "avoid_ingredients": "essential oils",
+        "fragrance_preference": "Prefer fragrance-free"
+      },
+      "location": {"city": "Boston"}
+    },
+    {
+      "id": "reactive-minimal",
+      "description": "Highly reactive skin requiring a minimal fragrance-free routine.",
+      "questionnaire": {
+        "skin_concerns": ["sensitivity", "redness", "irritation"],
+        "budget": "$0-$35 (per item)",
+        "preferred_texture": "lotion",
+        "avoid_ingredients": "fragrance, denatured alcohol, essential oils",
+        "fragrance_preference": "Prefer fragrance-free"
+      },
+      "location": {"city": "Seattle"}
+    },
+    {
+      "id": "humid-oily",
+      "description": "Oil control and clogged pores in a warm, humid climate.",
+      "questionnaire": {
+        "skin_concerns": ["oiliness", "blackheads", "clogged pores"],
+        "budget": "$10-$50 (per item)",
+        "preferred_texture": "gel",
+        "avoid_ingredients": "mineral oil",
+        "fragrance_preference": "No preference"
+      },
+      "location": {"city": "Miami"}
+    },
+    {
+      "id": "cold-weather-barrier",
+      "description": "Barrier damage and flaking in a cold climate.",
+      "questionnaire": {
+        "skin_concerns": ["damaged skin barrier", "flaking", "tightness"],
+        "budget": "$15-$55 (per item)",
+        "preferred_texture": "balm",
+        "avoid_ingredients": "fragrance",
+        "fragrance_preference": "Prefer fragrance-free"
+      },
+      "location": {"city": "Chicago"}
+    },
+    {
+      "id": "uneven-tone-lightweight",
+      "description": "Uneven tone with a lightweight texture preference.",
+      "questionnaire": {
+        "skin_concerns": ["uneven skin tone", "dullness"],
+        "budget": "$20-$80 (per item)",
+        "preferred_texture": "serum",
+        "avoid_ingredients": "None",
+        "fragrance_preference": "No preference"
+      },
+      "location": {"city": "Austin"}
+    },
+    {
+      "id": "strict-allergy-list",
+      "description": "Multiple ingredient exclusions that must be enforced deterministically.",
+      "questionnaire": {
+        "skin_concerns": ["dryness", "sensitivity"],
+        "budget": "$10-$65 (per item)",
+        "preferred_texture": "cream",
+        "avoid_ingredients": "fragrance, lanolin, limonene, linalool",
+        "fragrance_preference": "Prefer fragrance-free"
+      },
+      "location": {"city": "London"}
+    },
+    {
+      "id": "low-budget-basic-routine",
+      "description": "Very limited budget requiring practical catalog choices.",
+      "questionnaire": {
+        "skin_concerns": ["dryness", "dullness"],
+        "budget": "$0-$15 (per item)",
+        "preferred_texture": "No preference",
+        "avoid_ingredients": "None",
+        "fragrance_preference": "No preference"
+      },
+      "location": {"city": "Manchester"}
+    },
+    {
+      "id": "no-location-fallback",
+      "description": "Workflow must still complete when location and weather are unavailable.",
+      "questionnaire": {
+        "skin_concerns": ["acne", "redness"],
+        "budget": "$15-$45 (per item)",
+        "preferred_texture": "gel",
+        "avoid_ingredients": "fragrance",
+        "fragrance_preference": "Prefer fragrance-free"
+      },
+      "location": {}
+    }
+  ]
+}

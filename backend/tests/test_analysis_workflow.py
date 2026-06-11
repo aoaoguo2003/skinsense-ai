@@ -124,6 +124,11 @@ class AnalysisWorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(model_mock.await_count, 2)
         self.assertEqual(result["model_attempts"], 2)
         self.assertEqual(result["validation_errors"], [])
+        timing_nodes = [event["node"] for event in result["timing_events"]]
+        self.assertEqual(timing_nodes.count("weather_context"), 1)
+        self.assertEqual(timing_nodes.count("product_retrieval"), 1)
+        self.assertEqual(timing_nodes.count("model_analysis"), 2)
+        self.assertEqual(timing_nodes.count("result_validation"), 2)
         self.assertEqual(
             result["final_analysis"]["product_recommendations"][0]["catalog_id"],
             "catalog:1",
@@ -160,6 +165,7 @@ class AnalysisApiTests(unittest.TestCase):
         self.assertEqual(body["trace_id"], "trace-test")
         self.assertEqual(body["workflow"]["engine"], "langgraph")
         self.assertEqual(body["workflow"]["model_attempts"], 1)
+        self.assertEqual(body["workflow"]["timing_events"], [])
 
 
 if __name__ == "__main__":

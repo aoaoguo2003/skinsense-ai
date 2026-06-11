@@ -94,6 +94,7 @@ async def analyze_endpoint(
             "engine": "langgraph",
             "model_attempts": workflow.get("model_attempts", 0),
             "validation_errors": workflow.get("validation_errors", []),
+            "timing_events": workflow.get("timing_events", []),
         },
     }
 

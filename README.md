@@ -2,6 +2,8 @@
 
 > A multimodal AI skincare decision system that turns a real-time face scan, local weather, user constraints, and a grounded product catalog into explainable recommendations.
 
+[![AI Evaluation Gate](https://github.com/aoaoguo2003/skinsense-ai/actions/workflows/evaluation.yml/badge.svg)](https://github.com/aoaoguo2003/skinsense-ai/actions/workflows/evaluation.yml)
+
 SkinSense AI 是一个由我独立设计并实现的端到端 AI 应用。它不只是调用一次大模型：系统会在浏览器端完成实时人脸引导与图像质量判断，在后端使用 LangGraph 编排天气工具、产品 RAG、多模态模型和确定性校验，拦截模型虚构的商品，最终生成可保存的个性化护肤报告。
 
 这个项目重点解决一个真实问题：通用大模型可以给出听起来合理的护肤建议，但容易忽略预算、过敏成分和所在市场，也可能推荐不存在或无法购买的产品。SkinSense AI 将模型的视觉理解和语言推理能力放进一个可约束、可追溯、可降级的工程系统中。
@@ -15,6 +17,7 @@ SkinSense AI 是一个由我独立设计并实现的端到端 AI 应用。它不
 - **商品幻觉控制**：模型只能从检索到的候选商品中推荐；后处理会删除不在数据库中的商品，并用数据库字段覆盖品牌、名称、价格和来源链接。
 - **LangGraph 工作流**：将天气、检索、模型和校验拆成有状态节点；校验失败时只重跑模型与校验节点，不重复天气查询和商品检索。
 - **节点级可观测性**：每次分析返回 `trace_id`；配置 LangSmith 后可查看各节点输入输出、耗时、重试和错误。
+- **自动化评测与回归分析**：使用版本化案例集量化 Catalog grounding、过敏成分/预算/无香约束、端到端延迟、节点耗时和重试率，并支持与历史基线自动比较。
 - **可靠性与降级**：限制上传图片数量和体积；模型输出支持重试与 JSON 修复；天气或 RAG 暂时不可用时，核心分析仍可继续。
 - **完整产品体验**：包含登录、沉浸式扫描、偏好收集、分析状态、结构化结果、商品来源和报告导出。
 
@@ -209,13 +212,57 @@ npm run dev
 - LangGraph 校验失败条件路由
 - 仅重跑模型节点的定向重试
 - FastAPI 工作流元数据响应
+- 评测指标计算与失败案例识别
+- P95 延迟、节点耗时和基线差异统计
+- 评测集 ID 唯一性与结构校验
 
 ```powershell
 cd backend
 python -m unittest discover -s tests -v
 ```
 
-当前测试结果：**9 个后端单元与接口测试通过**。前端已通过 Next.js production build。
+当前测试结果：**15 个后端单元与接口测试通过**。前端已通过 Next.js production build。
+
+## 自动化评测系统
+
+项目内置 12 个版本化核心案例，覆盖低预算、多重避用成分、无香偏好、不同产品质地、不同气候和无定位降级等场景。评测器会真实运行 LangGraph 工作流，并从质量和性能两个维度生成 JSON 与 Markdown 报告。
+
+每次后端代码 push 或 Pull Request 都会触发 GitHub Actions `AI Evaluation Gate`，自动运行测试并校验评测集。真实模型评测需要显式执行，避免普通提交无意产生 API 费用。
+
+质量指标：
+
+- 必需 JSON 结构成功率
+- RAG 是否召回可用候选
+- 是否生成有效推荐
+- Catalog grounding 比例
+- 避用成分合规率
+- 无香偏好合规率
+- 预算合规率
+- 质地偏好匹配率
+- 用户问题覆盖率
+
+性能指标：
+
+- 平均、P50 与 P95 端到端延迟
+- 天气、RAG、模型与校验节点的独立耗时
+- 模型平均调用次数与定向重试率
+- RAG 异常降级率
+- 相比上一份基线报告的质量与性能变化
+
+```powershell
+cd backend
+
+# 只校验评测集，不调用付费 API
+python -m evaluation.runner --mode validate
+
+# 运行 3 个真实案例作为开发期 smoke test
+python -m evaluation.runner --mode live --limit 3
+
+# 运行完整评测并与历史基线比较
+python -m evaluation.runner --mode live --baseline evaluation/reports/evaluation-YYYYMMDDTHHMMSSZ.json
+```
+
+详细说明见 [backend/evaluation/README.md](backend/evaluation/README.md)。当前核心评测集是无图片的文本约束评测，用于验证 RAG、推荐合规性和系统性能；它不代表医学诊断准确率。面部视觉准确率需要后续使用经过授权并由专业人员标注的数据单独评测。
 
 ## 当前进度
 
@@ -228,15 +275,16 @@ python -m unittest discover -s tests -v
 - Product RAG 数据库、Embedding、向量召回和硬过滤
 - 商品推荐后校验与来源展示
 - LangGraph 状态工作流和校验反馈重试
-- `trace_id` 与可选 LangSmith 节点追踪
+- `trace_id`、节点级耗时与可选 LangSmith 追踪
+- 12 案例自动化评测集、质量/性能报告和基线回归比较
 - Render 空库自动初始化和后台数据导入
 - 分析报告与 PDF/图片导出
 - 后端 RAG 核心逻辑测试
 
 ### 下一阶段
 
-- 建立离线评测集，量化检索 Recall@K、商品合规率和回答稳定性。
-- 建立 LangSmith Dashboard，持续统计节点延迟、Token 成本和降级原因。
+- 收集经过授权和专业标注的面部图片，建立多模态观察准确率评测集。
+- 建立 LangSmith Dashboard，持续统计 Token 成本、长期趋势和降级原因。
 - 将天气查询与产品检索并行化，并加入超时、缓存和更细粒度的降级策略。
 - 引入经过审核的零售商或联盟商品数据，改善价格、库存与市场覆盖。
 - 增加成分冲突的确定性规则层，减少完全依赖模型判断。
@@ -250,8 +298,8 @@ python -m unittest discover -s tests -v
 | AI 原生架构 | 使用 LangGraph 将感知、工具调用、知识检索、模型推理和确定性验证拆成有状态节点 |
 | 知识与环境构建 | 接入天气 API、Open Beauty Facts、PostgreSQL 与 pgvector，为模型动态注入上下文 |
 | 核心能力实现 | 多模态 Prompt、LangGraph 条件路由、校验反馈重试、JSON 修复、Catalog grounding |
-| 评测与迭代 | 已覆盖关键 RAG 规则测试，下一步建设检索与回答自动化评测 |
-| 性能与稳定性 | FastAPI 异步服务、连接池、节点重试、图片限制、异常降级和后台数据初始化 |
+| 评测与迭代 | 版本化案例集、质量与性能指标、P95 延迟、失败案例归因、基线回归比较 |
+| 性能与稳定性 | FastAPI 异步服务、连接池、节点耗时、定向重试、图片限制、异常降级和后台数据初始化 |
 | 工程落地能力 | 从交互设计、前后端开发、AI 接入、数据库到云部署的完整闭环 |
 
 这个项目展示的不是“会调用一个模型 API”，而是如何识别大模型的不确定性，再通过上下文工程、工具、RAG、规则和工程降级把它变成一个可以实际使用的产品。
@@ -269,6 +317,7 @@ python -m unittest discover -s tests -v
 │   ├── routers/              # 分析、商品状态 API
 │   ├── services/             # LLM、天气、Embedding、Product RAG
 │   ├── workflows/            # LangGraph 状态、节点、条件路由与重试
+│   ├── evaluation/           # 版本化案例集、评分器、报告与基线比较
 │   ├── scripts/              # 数据库初始化与商品导入
 │   ├── sql/                  # pgvector schema 与索引
 │   └── tests/                # RAG、LangGraph 与 API 测试
