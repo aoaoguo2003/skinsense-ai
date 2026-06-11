@@ -187,6 +187,34 @@ class EvaluationMetricTests(unittest.TestCase):
             result["metrics"]["avoided_ingredient_compliance"]
         )
 
+    def test_missing_catalog_metadata_is_unavailable_not_noncompliant(self):
+        candidate = make_candidate(
+            fragrance_free=None,
+            price_min_usd=None,
+            texture=None,
+        )
+        result = score_case(
+            make_case(),
+            {
+                "trace_id": "trace-sparse",
+                "final_analysis": make_analysis(),
+                "rag_candidates": [candidate],
+                "remote_candidate_count": 12,
+                "remote_grounded_count": 1,
+                "validation_errors": [],
+                "model_attempts": 1,
+                "retrieval_error": None,
+                "timing_events": [],
+            },
+            latency_ms=100,
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["workflow"]["candidate_count"], 12)
+        self.assertIsNone(result["metrics"]["fragrance_compliance"])
+        self.assertIsNone(result["metrics"]["budget_compliance"])
+        self.assertIsNone(result["metrics"]["texture_preference_match"])
+
     def test_aggregation_and_baseline_comparison(self):
         passing = score_case(
             make_case(),
@@ -382,6 +410,41 @@ class EvaluationDatasetTests(unittest.TestCase):
                 "SkinSense Evaluation Report",
                 markdown_path.read_text(encoding="utf-8"),
             )
+
+    def test_replay_preserves_repeated_case_samples(self):
+        case = make_case()
+        candidate = make_candidate()
+        workflow = {
+            "final_analysis": make_analysis(),
+            "rag_candidates": [
+                {
+                    **candidate.__dict__,
+                }
+            ],
+            "validation_errors": [],
+            "model_attempts": 1,
+            "timing_events": [],
+        }
+        replay = {
+            "runs": [
+                {"case_id": case["id"], "workflow": workflow},
+                {"case_id": case["id"], "workflow": workflow},
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            replay_path = Path(directory) / "replay.json"
+            replay_path.write_text(json.dumps(replay), encoding="utf-8")
+            results = score_replay(
+                {"cases": [case]},
+                replay_path,
+            )
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(
+            [result["sample_index"] for result in results],
+            [1, 2],
+        )
 
 
 if __name__ == "__main__":

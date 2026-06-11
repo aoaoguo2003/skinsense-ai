@@ -209,6 +209,7 @@ def score_replay(
     replay_path: Path,
 ) -> list[dict[str, Any]]:
     replay = json.loads(replay_path.read_text(encoding="utf-8"))
+    cases_by_id = {case["id"]: case for case in dataset["cases"]}
     if "runs" in replay:
         replay_items = replay["runs"]
     elif "results" in replay:
@@ -224,33 +225,29 @@ def score_replay(
         ]
     else:
         raise ValueError("Replay file must contain runs or evaluation results")
-    by_case = {item["case_id"]: item for item in replay_items}
     results = []
-    for case in dataset["cases"]:
-        item = by_case.get(case["id"])
-        if item is None:
-            results.append(
-                score_case(
-                    case,
-                    None,
-                    latency_ms=0,
-                    error="Case missing from replay file",
-                )
+    for sample_index, item in enumerate(replay_items, start=1):
+        case = cases_by_id.get(item["case_id"])
+        if case is None:
+            raise ValueError(
+                f"Replay case {item['case_id']} is not in the dataset"
             )
+        if not item.get("workflow"):
             continue
         workflow = dict(item["workflow"])
         workflow["rag_candidates"] = [
             ProductCandidate(**candidate)
             for candidate in workflow.get("rag_candidates", [])
         ]
-        results.append(
-            score_case(
-                case,
-                workflow,
-                latency_ms=float(item.get("latency_ms", 0)),
-                error=item.get("error"),
-            )
+        result = score_case(
+            case,
+            workflow,
+            latency_ms=float(item.get("latency_ms", 0)),
+            error=item.get("error"),
         )
+        result["sample_index"] = item.get("sample_index", sample_index)
+        result["raw_workflow"] = item["workflow"]
+        results.append(result)
     return results
 
 

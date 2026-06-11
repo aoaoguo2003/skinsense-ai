@@ -61,6 +61,23 @@ def _constraint_rate(
     return round(mean(checks), 4)
 
 
+def _known_constraint_rate(
+    recommendations: list[dict[str, Any]],
+    candidates: dict[str, ProductCandidate],
+    predicate,
+) -> Optional[float]:
+    checks = []
+    for recommendation in recommendations:
+        candidate = candidates.get(str(recommendation.get("catalog_id") or ""))
+        if candidate is None:
+            checks.append(False)
+            continue
+        outcome = predicate(candidate)
+        if outcome is not None:
+            checks.append(bool(outcome))
+    return round(mean(checks), 4) if checks else None
+
+
 def score_case(
     case: dict[str, Any],
     workflow: Optional[dict[str, Any]],
@@ -131,33 +148,39 @@ def score_case(
         else None
     )
     fragrance_rate = (
-        _constraint_rate(
+        _known_constraint_rate(
             recommendations,
             candidates,
-            lambda candidate: candidate.fragrance_free is True,
+            lambda candidate: (
+                None
+                if candidate.fragrance_free is None
+                else candidate.fragrance_free is True
+            ),
         )
         if fragrance_free and candidates
         else None
     )
     budget_rate = (
-        _constraint_rate(
+        _known_constraint_rate(
             recommendations,
             candidates,
             lambda candidate: (
-                candidate.price_min_usd is not None
-                and candidate.price_min_usd <= budget_max
+                None
+                if candidate.price_min_usd is None
+                else candidate.price_min_usd <= budget_max
             ),
         )
         if budget_max is not None and candidates
         else None
     )
     texture_rate = (
-        _constraint_rate(
+        _known_constraint_rate(
             recommendations,
             candidates,
-            lambda candidate: bool(
-                candidate.texture
-                and preferred_texture in candidate.texture.lower()
+            lambda candidate: (
+                None
+                if not candidate.texture
+                else preferred_texture in candidate.texture.lower()
             ),
         )
         if (
@@ -238,9 +261,9 @@ def score_case(
             "model_attempts": workflow.get("model_attempts", 0),
             "retrieval_error": workflow.get("retrieval_error"),
             "candidate_count": (
-                len(candidates)
-                if candidates
-                else int(remote_candidate_count or 0)
+                int(remote_candidate_count)
+                if remote_candidate_count is not None
+                else len(candidates)
             ),
             "recommendation_count": len(recommendations),
             "validation_errors": workflow.get("validation_errors", []),

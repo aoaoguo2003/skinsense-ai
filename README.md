@@ -221,7 +221,7 @@ cd backend
 python -m unittest discover -s tests -v
 ```
 
-当前测试结果：**18 个后端单元与接口测试通过**。前端已通过 Next.js production build。
+当前测试结果：**21 个后端单元与接口测试通过**。前端已通过 Next.js production build。
 
 ## 自动化评测系统
 
@@ -265,6 +265,8 @@ python -m evaluation.runner --mode live --baseline evaluation/reports/evaluation
 详细说明见 [backend/evaluation/README.md](backend/evaluation/README.md)。当前核心评测集是无图片的文本约束评测，用于验证 RAG、推荐合规性和系统性能；它不代表医学诊断准确率。面部视觉准确率需要后续使用经过授权并由专业人员标注的数据单独评测。
 
 首轮 30 次线上评测的审阅摘要见 [2026-06-11 live baseline](backend/evaluation/baselines/2026-06-11-live-baseline.md)。该基线如实记录了上游 500、模型节点高延迟、Open Beauty Facts 字段缺失和零候选商品幻觉，并列出由评测直接推动的修复。
+
+Claude 充值恢复后的 10 次 smoke evaluation 见 [2026-06-11 Claude smoke baseline](backend/evaluation/baselines/2026-06-11-claude-10-smoke.md)：10/10 工作流成功，结构与 Catalog grounding 均为 100%，但无香硬过滤导致 6/10 案例零召回；平均模型节点耗时约 105 秒，RAG 检索约 0.66 秒。
 
 ## 当前进度
 
