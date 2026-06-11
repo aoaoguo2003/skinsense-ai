@@ -18,7 +18,7 @@ class RagSettings(BaseSettings):
     rag_enabled: bool = False
     database_url: str = ""
     rag_candidate_limit: int = 12
-    rag_bootstrap_limit: int = 0
+    rag_bootstrap_limit: int = 300
     cny_per_usd: float = 7.2
     gbp_to_usd: float = 1.27
 
