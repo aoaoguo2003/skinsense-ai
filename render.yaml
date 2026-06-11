@@ -19,6 +19,8 @@ services:
         sync: false
       - key: EMBEDDING_MODEL
         value: text-embedding-3-small
+      - key: RAG_BOOTSTRAP_LIMIT
+        value: "300"
       - key: OPENWEATHER_API_KEY
         sync: false
       - key: SERPER_API_KEY

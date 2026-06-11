@@ -25,6 +25,7 @@ OPENAI_API_KEY=...
 EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_DIMENSIONS=1536
 RAG_CANDIDATE_LIMIT=12
+RAG_BOOTSTRAP_LIMIT=300
 ```
 
 From `backend/`:
@@ -34,6 +35,10 @@ pip install -r requirements.txt
 python -m scripts.init_rag_db
 python -m scripts.import_open_beauty_facts --limit 300
 ```
+
+On Render, `RAG_BOOTSTRAP_LIMIT=300` starts the same import in the background when
+the service boots and the catalog is empty. Set it to `0` to disable automatic
+bootstrap. This is useful for Free web services, which do not provide shell access.
 
 For licensed affiliate feeds or manually reviewed data:
 

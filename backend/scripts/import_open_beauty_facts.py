@@ -12,11 +12,13 @@ from services.product_rag import initialize_schema, upsert_products
 API_URL = "https://world.openbeautyfacts.org/api/v2/search"
 USER_AGENT = "SkinSenseAI/1.0 (product-rag-import; contact: project-maintainer)"
 DEFAULT_CATEGORIES = [
-    "skin-care-products",
-    "facial-care-products",
-    "facial-moisturizers",
-    "facial-cleansers",
-    "sunscreens",
+    "en:face",
+    "en:facial-creams",
+    "en:cleansers",
+    "en:suncare",
+    "en:sunscreen",
+    "en:anti-aging-face-care-products",
+    "en:face-masks",
 ]
 FIELDS = ",".join(
     [
@@ -118,7 +120,7 @@ async def fetch_category(
         response = await client.get(
             API_URL,
             params={
-                "categories_tags_en": category,
+                "categories_tags": category,
                 "fields": FIELDS,
                 "page": page,
                 "page_size": page_size,
@@ -141,8 +143,6 @@ async def run(limit: int, pages: int, page_size: int) -> None:
     ) as client:
         for category in DEFAULT_CATEGORIES:
             raw_products.extend(await fetch_category(client, category, pages, page_size))
-            if len(raw_products) >= limit * 2:
-                break
 
     normalized = {}
     for raw_product in raw_products:

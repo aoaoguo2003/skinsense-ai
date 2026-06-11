@@ -18,6 +18,7 @@ class RagSettings(BaseSettings):
     rag_enabled: bool = False
     database_url: str = ""
     rag_candidate_limit: int = 12
+    rag_bootstrap_limit: int = 0
     cny_per_usd: float = 7.2
     gbp_to_usd: float = 1.27
 
@@ -254,6 +255,16 @@ async def catalog_status() -> dict[str, Any]:
     pool = await get_pool()
     count = await pool.fetchval("SELECT COUNT(*) FROM catalog_products WHERE embedding IS NOT NULL")
     return {"enabled": True, "configured": True, "product_count": int(count)}
+
+
+async def catalog_product_count() -> int:
+    if not rag_is_configured():
+        return 0
+    pool = await get_pool()
+    count = await pool.fetchval(
+        "SELECT COUNT(*) FROM catalog_products WHERE embedding IS NOT NULL"
+    )
+    return int(count)
 
 
 async def upsert_products(products: list[dict[str, Any]], batch_size: int = 50) -> int:
