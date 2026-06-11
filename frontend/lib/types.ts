@@ -111,6 +111,7 @@ export interface AnalyzeResponse {
       image_url?: string | null;
       similarity?: number;
     }>;
+    empty_result?: boolean;
     error?: string | null;
   };
   workflow?: {

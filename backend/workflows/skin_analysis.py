@@ -42,6 +42,7 @@ class AnalysisState(TypedDict, total=False):
     image_count: int
     weather: Optional[dict[str, Any]]
     rag_candidates: list[ProductCandidate]
+    rag_grounding_enabled: bool
     retrieval_error: Optional[str]
     analysis_draft: dict[str, Any]
     final_analysis: dict[str, Any]
@@ -75,6 +76,7 @@ async def retrieve_products_node(state: AnalysisState) -> dict[str, Any]:
     if not rag_is_configured():
         return {
             "rag_candidates": [],
+            "rag_grounding_enabled": False,
             "retrieval_error": None,
             "timing_events": [
                 _timing_event("product_retrieval", started_at, status="skipped")
@@ -88,6 +90,7 @@ async def retrieve_products_node(state: AnalysisState) -> dict[str, Any]:
         )
         return {
             "rag_candidates": candidates,
+            "rag_grounding_enabled": True,
             "retrieval_error": None,
             "timing_events": [_timing_event("product_retrieval", started_at)],
         }
@@ -98,6 +101,7 @@ async def retrieve_products_node(state: AnalysisState) -> dict[str, Any]:
         )
         return {
             "rag_candidates": [],
+            "rag_grounding_enabled": True,
             "retrieval_error": type(exc).__name__,
             "timing_events": [
                 _timing_event(
@@ -153,6 +157,8 @@ async def analyze_node(
 def validate_analysis(
     draft: Any,
     candidates: list[ProductCandidate],
+    *,
+    grounding_required: bool = False,
 ) -> tuple[dict[str, Any], list[str]]:
     if not isinstance(draft, dict):
         return {}, ["The model response must be a JSON object."]
@@ -167,6 +173,11 @@ def validate_analysis(
     if not isinstance(raw_recommendations, list):
         errors.append("product_recommendations must be a JSON list.")
         raw_recommendations = []
+
+    if grounding_required and not candidates:
+        grounded = copy.deepcopy(draft)
+        grounded["product_recommendations"] = []
+        return grounded, errors
 
     grounded = ground_recommendations(copy.deepcopy(draft), candidates)
     grounded_recommendations = grounded.get("product_recommendations", [])
@@ -188,6 +199,7 @@ async def validate_node(state: AnalysisState) -> dict[str, Any]:
     final_analysis, errors = validate_analysis(
         state.get("analysis_draft"),
         state.get("rag_candidates", []),
+        grounding_required=state.get("rag_grounding_enabled", False),
     )
     return {
         "final_analysis": final_analysis,
@@ -285,6 +297,7 @@ async def run_analysis_workflow(
                 "image_labels": image_labels or [],
                 "image_count": len(image_payloads),
                 "rag_candidates": [],
+                "rag_grounding_enabled": rag_is_configured(),
                 "validation_errors": [],
                 "model_attempts": 0,
                 "timing_events": [],

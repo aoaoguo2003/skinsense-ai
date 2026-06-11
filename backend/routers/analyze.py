@@ -2,6 +2,7 @@ from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import Optional
 import json
+import logging
 import os
 import httpx
 
@@ -9,6 +10,7 @@ from services.product_rag import rag_is_configured
 from workflows.skin_analysis import run_analysis_workflow
 
 router = APIRouter(prefix="/api", tags=["analyze"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/analyze")
@@ -67,15 +69,25 @@ async def analyze_endpoint(
             raise HTTPException(status_code=413, detail="Images too large (max 20MB total)")
         image_payloads.append((image_bytes, upload.content_type or "image/jpeg"))
 
-    workflow = await run_analysis_workflow(
-        questionnaire=q_data,
-        current_products=products_list,
-        city=city,
-        latitude=latitude,
-        longitude=longitude,
-        image_payloads=image_payloads,
-        image_labels=labels_list,
-    )
+    try:
+        workflow = await run_analysis_workflow(
+            questionnaire=q_data,
+            current_products=products_list,
+            city=city,
+            latitude=latitude,
+            longitude=longitude,
+            image_payloads=image_payloads,
+            image_labels=labels_list,
+        )
+    except Exception as exc:
+        logger.exception("Analysis workflow failed: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "analysis_upstream_error",
+                "type": type(exc).__name__,
+            },
+        ) from exc
     result = workflow["final_analysis"]
     rag_candidates = workflow.get("rag_candidates", [])
     recommended_ids = {
@@ -98,6 +110,10 @@ async def analyze_endpoint(
             "candidate_count": len(rag_candidates),
             "grounded_recommendation_count": len(result.get("product_recommendations", [])),
             "recommendation_evidence": recommendation_evidence,
+            "empty_result": bool(
+                workflow.get("rag_grounding_enabled")
+                and not rag_candidates
+            ),
             "error": workflow.get("retrieval_error"),
         },
         "workflow": {

@@ -91,7 +91,11 @@ async def run_remote_case(
             f"{base_url.rstrip('/')}/api/analyze",
             data=form_data,
         )
-        response.raise_for_status()
+        if not response.is_success:
+            detail = response.text[:500]
+            raise RuntimeError(
+                f"Remote API returned {response.status_code}: {detail}"
+            )
         payload = response.json()
         retrieval = payload.get("retrieval", {})
         workflow_metadata = payload.get("workflow", {})
@@ -103,6 +107,10 @@ async def run_remote_case(
                 ProductCandidate(**candidate)
                 for candidate in retrieval.get("recommendation_evidence", [])
             ],
+            "remote_candidate_count": retrieval.get("candidate_count"),
+            "remote_grounded_count": retrieval.get(
+                "grounded_recommendation_count"
+            ),
             "retrieval_error": retrieval.get("error"),
             "validation_errors": workflow_metadata.get(
                 "validation_errors",

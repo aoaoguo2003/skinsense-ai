@@ -159,6 +159,33 @@ class EvaluationMetricTests(unittest.TestCase):
         self.assertFalse(result["success"])
         self.assertEqual(result["metrics"]["retrieval_has_candidates"], 0.0)
 
+    def test_remote_counts_support_legacy_deployed_api(self):
+        result = score_case(
+            make_case(),
+            {
+                "trace_id": "trace-legacy",
+                "final_analysis": make_analysis(),
+                "rag_candidates": [],
+                "remote_candidate_count": 12,
+                "remote_grounded_count": 1,
+                "validation_errors": [],
+                "model_attempts": 1,
+                "retrieval_error": None,
+                "timing_events": [],
+            },
+            latency_ms=100,
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["metrics"]["retrieval_has_candidates"], 1.0)
+        self.assertEqual(
+            result["metrics"]["grounded_recommendation_rate"],
+            1.0,
+        )
+        self.assertIsNone(
+            result["metrics"]["avoided_ingredient_compliance"]
+        )
+
     def test_aggregation_and_baseline_comparison(self):
         passing = score_case(
             make_case(),

@@ -93,6 +93,8 @@ def score_case(
     analysis = workflow.get("final_analysis") or {}
     recommendations = _recommendations(workflow)
     candidates = _candidate_map(workflow)
+    remote_candidate_count = workflow.get("remote_candidate_count")
+    remote_grounded_count = workflow.get("remote_grounded_count")
     avoided = parse_avoided_ingredients(questionnaire.get("avoid_ingredients"))
     budget_max = parse_budget_max_usd(questionnaire.get("budget"))
     fragrance_free = wants_fragrance_free(
@@ -102,11 +104,20 @@ def score_case(
         questionnaire.get("preferred_texture") or ""
     ).strip().lower()
 
-    grounded_rate = _constraint_rate(
-        recommendations,
-        candidates,
-        lambda _candidate: True,
-    )
+    if candidates:
+        grounded_rate = _constraint_rate(
+            recommendations,
+            candidates,
+            lambda _candidate: True,
+        )
+    elif remote_grounded_count is not None and recommendations:
+        grounded_rate = round(
+            min(int(remote_grounded_count), len(recommendations))
+            / len(recommendations),
+            4,
+        )
+    else:
+        grounded_rate = None
     avoided_rate = (
         _constraint_rate(
             recommendations,
@@ -116,7 +127,7 @@ def score_case(
                 for term in avoided
             ),
         )
-        if avoided
+        if avoided and candidates
         else None
     )
     fragrance_rate = (
@@ -125,7 +136,7 @@ def score_case(
             candidates,
             lambda candidate: candidate.fragrance_free is True,
         )
-        if fragrance_free
+        if fragrance_free and candidates
         else None
     )
     budget_rate = (
@@ -137,7 +148,7 @@ def score_case(
                 and candidate.price_min_usd <= budget_max
             ),
         )
-        if budget_max is not None
+        if budget_max is not None and candidates
         else None
     )
     texture_rate = (
@@ -149,7 +160,11 @@ def score_case(
                 and preferred_texture in candidate.texture.lower()
             ),
         )
-        if preferred_texture and preferred_texture != "no preference"
+        if (
+            preferred_texture
+            and preferred_texture != "no preference"
+            and candidates
+        )
         else None
     )
 
@@ -176,7 +191,13 @@ def score_case(
 
     metrics = {
         "schema_valid": float(_schema_valid(analysis)),
-        "retrieval_has_candidates": float(bool(candidates)),
+        "retrieval_has_candidates": float(
+            bool(candidates)
+            or (
+                remote_candidate_count is not None
+                and int(remote_candidate_count) > 0
+            )
+        ),
         "recommendation_present": float(bool(recommendations)),
         "grounded_recommendation_rate": grounded_rate,
         "avoided_ingredient_compliance": avoided_rate,
@@ -216,7 +237,11 @@ def score_case(
             "trace_id": workflow.get("trace_id"),
             "model_attempts": workflow.get("model_attempts", 0),
             "retrieval_error": workflow.get("retrieval_error"),
-            "candidate_count": len(candidates),
+            "candidate_count": (
+                len(candidates)
+                if candidates
+                else int(remote_candidate_count or 0)
+            ),
             "recommendation_count": len(recommendations),
             "validation_errors": workflow.get("validation_errors", []),
             "timing_events": timing_events,

@@ -75,6 +75,16 @@ class AnalysisWorkflowTests(unittest.IsolatedAsyncioTestCase):
             "finish",
         )
 
+    def test_grounding_removes_recommendations_when_catalog_has_no_match(self):
+        grounded, errors = validate_analysis(
+            make_analysis("", "Invented", "Magic Serum"),
+            [],
+            grounding_required=True,
+        )
+
+        self.assertEqual(errors, [])
+        self.assertEqual(grounded["product_recommendations"], [])
+
     async def test_workflow_retries_only_model_after_validation_failure(self):
         weather = {
             "city": "London",
