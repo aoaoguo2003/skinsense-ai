@@ -6,7 +6,7 @@
 
 [![AI Evaluation Gate](https://github.com/aoaoguo2003/skinsense-ai/actions/workflows/evaluation.yml/badge.svg)](https://github.com/aoaoguo2003/skinsense-ai/actions/workflows/evaluation.yml)
 
-SkinSense AI is an end-to-end AI application rather than a single model call. The browser guides a real-time multi-angle face scan and applies image-quality gates. The backend uses LangGraph to orchestrate weather context, product RAG, multimodal analysis, deterministic validation, directed retries, and report generation.
+SkinSense AI is an end-to-end AI skincare application. The browser guides a real-time multi-angle face scan and applies image-quality gates. The backend uses LangGraph to orchestrate weather context, product RAG, multimodal analysis, deterministic validation, directed retries, and report generation.
 
 The system addresses a practical reliability problem: general-purpose models can produce convincing skincare advice while ignoring allergies, budget, fragrance preferences, local climate, or product availability. SkinSense AI places probabilistic model capabilities inside a constrained, observable, and degradable engineering workflow.
 
@@ -26,25 +26,32 @@ The system addresses a practical reliability problem: general-purpose models can
 ## Architecture
 
 ```mermaid
-flowchart LR
-    U["Browser"] --> S["Real-time face scan"]
-    S --> M["MediaPipe<br/>landmarks and pose"]
-    M --> Q["Quality gates<br/>front / left / right"]
-    Q --> API["FastAPI /api/analyze"]
-    API --> LG["LangGraph workflow"]
+flowchart TB
+    subgraph A["1. Perception and Input"]
+        U["User preferences<br/>allergies / budget / texture"]
+        S["Multi-angle face scan"]
+        M["MediaPipe quality gates<br/>front / left / right"]
+        S --> M
+    end
 
-    LG --> W["OpenWeather context"]
-    W --> R["Product RAG"]
-    R --> F["Market / budget / ingredient filters"]
-    F --> E["OpenAI Embedding"]
-    E --> V["PostgreSQL + pgvector"]
+    subgraph B["2. LangGraph Orchestration"]
+        W["Weather context"]
+        R["Product RAG"]
+        L["Multimodal skin analysis"]
+        G["Grounding and validation"]
+        W --> R --> L --> G
+        G -. "validation feedback" .-> L
+    end
 
-    W --> L["Claude / OpenAI<br/>multimodal analysis"]
-    V --> L
-    Q --> L
-    L --> G["Grounding validator"]
-    G -. "validation feedback" .-> L
-    G --> O["Structured report<br/>sources / PDF / image"]
+    subgraph C["3. Knowledge and Output"]
+        DB["PostgreSQL + pgvector<br/>Open Beauty Facts"]
+        O["Personalized report<br/>skin insights / grounded products"]
+    end
+
+    U --> W
+    M --> L
+    DB <--> R
+    G --> O
 ```
 
 The architecture separates probabilistic and deterministic responsibilities:

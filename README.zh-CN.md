@@ -6,7 +6,7 @@
 
 [![AI Evaluation Gate](https://github.com/aoaoguo2003/skinsense-ai/actions/workflows/evaluation.yml/badge.svg)](https://github.com/aoaoguo2003/skinsense-ai/actions/workflows/evaluation.yml)
 
-SkinSense AI 是一个端到端 AI 应用，而不是一次简单的大模型调用。浏览器端负责实时多角度面部引导和图像质量判断；后端使用 LangGraph 编排天气上下文、产品 RAG、多模态分析、确定性校验、定向重试和报告生成。
+SkinSense AI 是一个端到端 AI 护肤应用。浏览器端负责实时多角度面部引导和图像质量判断；后端使用 LangGraph 编排天气上下文、产品 RAG、多模态分析、确定性校验、定向重试和报告生成。
 
 系统重点解决通用模型在护肤建议中的可靠性问题：模型可能忽略过敏成分、预算、香味偏好、当地气候和商品可购买性，也可能推荐不存在的商品。SkinSense AI 将概率型模型能力放入可约束、可观测、可降级的工程流程中。
 
@@ -26,25 +26,32 @@ SkinSense AI 是一个端到端 AI 应用，而不是一次简单的大模型调
 ## 系统架构
 
 ```mermaid
-flowchart LR
-    U["浏览器"] --> S["实时面部扫描"]
-    S --> M["MediaPipe<br/>人脸与姿态检测"]
-    M --> Q["质量门控<br/>正脸 / 左脸 / 右脸"]
-    Q --> API["FastAPI /api/analyze"]
-    API --> LG["LangGraph 工作流"]
+flowchart TB
+    subgraph A["1. 感知与输入"]
+        U["用户偏好<br/>过敏 / 预算 / 质地"]
+        S["多角度面部扫描"]
+        M["MediaPipe 质量门控<br/>正脸 / 左脸 / 右脸"]
+        S --> M
+    end
 
-    LG --> W["OpenWeather 环境上下文"]
-    W --> R["Product RAG"]
-    R --> F["市场 / 预算 / 成分过滤"]
-    F --> E["OpenAI Embedding"]
-    E --> V["PostgreSQL + pgvector"]
+    subgraph B["2. LangGraph 编排"]
+        W["天气上下文"]
+        R["商品 RAG"]
+        L["多模态肤质分析"]
+        G["商品落地与结果校验"]
+        W --> R --> L --> G
+        G -. "校验反馈" .-> L
+    end
 
-    W --> L["Claude / OpenAI<br/>多模态分析"]
-    V --> L
-    Q --> L
-    L --> G["Grounding 校验器"]
-    G -. "校验反馈" .-> L
-    G --> O["结构化报告<br/>来源 / PDF / 图片"]
+    subgraph C["3. 知识与输出"]
+        DB["PostgreSQL + pgvector<br/>Open Beauty Facts"]
+        O["个性化报告<br/>皮肤分析 / 真实商品推荐"]
+    end
+
+    U --> W
+    M --> L
+    DB <--> R
+    G --> O
 ```
 
 架构将概率型能力与确定性逻辑分开：
