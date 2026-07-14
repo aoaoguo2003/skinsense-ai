@@ -229,7 +229,7 @@ async def retrieve_product_candidates(
         FROM catalog_products
         WHERE embedding IS NOT NULL
           AND (cardinality(markets) = 0 OR markets && $2::text[])
-          AND ($3::boolean = FALSE OR fragrance_free IS TRUE)
+          AND ($3::boolean = FALSE OR fragrance_free IS NOT FALSE)
           AND ($4::numeric IS NULL OR price_min_usd IS NULL OR price_min_usd <= $4)
           AND NOT EXISTS (
               SELECT 1

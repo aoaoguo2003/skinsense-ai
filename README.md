@@ -181,6 +181,8 @@ python -m evaluation.runner --mode live --runs 10 `
 
 All four cases without a fragrance-free requirement retrieved candidates and passed. All six fragrance-free cases returned zero candidates because Open Beauty Facts has sparse verified fragrance metadata. The 40% quality-gate result therefore identifies a catalog coverage problem, not a 40% model-accuracy claim.
 
+**Retrieval fix (post-baseline, not yet re-measured):** Root-cause analysis traced the six zero-candidate cases to the fragrance-free retrieval filter, which required `fragrance_free IS TRUE` and therefore excluded rows where the field is `NULL` (unlabeled). This treated "unknown" as "contains fragrance" and was inconsistent with the evaluation metric, which counts unlabeled candidates as acceptable. The filter now uses `fragrance_free IS NOT FALSE` — it keeps confirmed fragrance-free and unlabeled products and only excludes confirmed-fragranced ones, while the avoided-ingredients filter still blocks explicitly fragranced items. The quality gate above (4/10) reflects the pre-fix state; an updated baseline will be re-run before the numbers here are revised.
+
 Reviewed reports:
 
 - [Initial live baseline](backend/evaluation/baselines/2026-06-11-live-baseline.md)
