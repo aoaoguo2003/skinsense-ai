@@ -291,19 +291,6 @@ Current verification:
 - Next.js production build passing
 - GitHub Actions `AI Evaluation Gate` enabled for backend pushes and pull requests
 
-## Role Relevance
-
-| AI application / Agent engineering requirement | Evidence in SkinSense AI |
-| --- | --- |
-| Problem definition | Converts unreliable generic recommendations into measurable perception, context, retrieval, and validation problems |
-| AI-native architecture | Stateful LangGraph workflow with tools, conditional routing, retries, and deterministic validation |
-| Knowledge and environment | Weather API, Open Beauty Facts, PostgreSQL, pgvector, and dynamic context injection |
-| Core implementation | Multimodal prompts, RAG, structured output repair, catalog grounding, and provider error handling |
-| Evaluation and iteration | Versioned cases, automated metrics, P95 latency, baseline comparison, and case-driven fixes |
-| Reliability | Async FastAPI, connection pools, input limits, degradation paths, checkpoints, and observability |
-| Delivery | Frontend, backend, database, AI integration, CI, and cloud deployment |
-
-The project demonstrates how model uncertainty can be constrained through context engineering, tool integration, retrieval, rules, validation, evaluation, and production failure handling.
 
 ## Repository Structure
 

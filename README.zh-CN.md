@@ -291,20 +291,6 @@ python -m unittest discover -s tests -v
 - Next.js production build 通过
 - GitHub Actions `AI Evaluation Gate` 已启用
 
-## 与 AI 应用 / Agent 工程岗位的对应
-
-| 岗位能力 | SkinSense AI 中的实践 |
-| --- | --- |
-| 问题定义 | 将不可信推荐拆解为感知、上下文、检索、校验和数据覆盖问题 |
-| AI 原生架构 | LangGraph 状态管理、工具调用、条件路由、定向重试和确定性校验 |
-| 知识与环境 | 天气 API、Open Beauty Facts、PostgreSQL、pgvector 和动态上下文注入 |
-| 核心实现 | 多模态 Prompt、RAG、JSON 修复、Catalog grounding 和上游错误处理 |
-| 评测与迭代 | 版本化案例、自动指标、P95 延迟、基线比较和 Case 驱动修复 |
-| 稳定性 | FastAPI 异步服务、连接池、输入限制、降级、checkpoint 和可观测性 |
-| 工程落地 | 前端、后端、数据库、AI 集成、CI 和云端部署 |
-
-该项目展示了如何通过上下文工程、工具调用、RAG、规则、校验、评测和生产故障处理约束模型的不确定性。
-
 ## 项目结构
 
 ```text
