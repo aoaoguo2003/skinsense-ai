@@ -211,6 +211,7 @@ async def analyze_with_claude(
         response = await client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=8000,
+            temperature=0.2,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": content}],
         )
@@ -280,6 +281,7 @@ async def analyze_with_openai(
     response = await client.chat.completions.create(
         model="gpt-4o",
         max_tokens=4096,
+        temperature=0.2,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": content},
