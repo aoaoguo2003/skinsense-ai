@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnableConfig, RunnableLambda
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RetryPolicy
 
-from services.llm_service import analyze_skin
+from services.llm_service import diagnose_skin, recommend_products
 from services.product_rag import (
     ProductCandidate,
     ground_recommendations,
@@ -41,10 +41,12 @@ class AnalysisState(TypedDict, total=False):
     image_labels: list[str]
     image_count: int
     weather: Optional[dict[str, Any]]
+    skin_diagnosis: dict[str, Any]
+    retrieval_signals: dict[str, Any]
     rag_candidates: list[ProductCandidate]
     rag_grounding_enabled: bool
     retrieval_error: Optional[str]
-    analysis_draft: dict[str, Any]
+    recommendation_draft: dict[str, Any]
     final_analysis: dict[str, Any]
     validation_errors: list[str]
     model_attempts: int
@@ -87,6 +89,7 @@ async def retrieve_products_node(state: AnalysisState) -> dict[str, Any]:
         candidates = await retrieve_product_candidates(
             state["questionnaire"],
             state.get("weather"),
+            retrieval_signals=state.get("retrieval_signals"),
         )
         return {
             "rag_candidates": candidates,
@@ -114,27 +117,44 @@ async def retrieve_products_node(state: AnalysisState) -> dict[str, Any]:
         }
 
 
-async def _invoke_multimodal_model(state: AnalysisState) -> dict[str, Any]:
+async def _invoke_diagnosis(state: AnalysisState) -> dict[str, Any]:
     started_at = perf_counter()
     image_payloads = _ephemeral_images.get(state["trace_id"], [])
+    diagnosis = await diagnose_skin(
+        questionnaire=state["questionnaire"],
+        weather=state.get("weather"),
+        image_payloads=image_payloads,
+        image_labels=state.get("image_labels"),
+    )
+    if not isinstance(diagnosis, dict):
+        diagnosis = {}
+    retrieval_signals = diagnosis.pop("retrieval_signals", None)
+    if not isinstance(retrieval_signals, dict):
+        retrieval_signals = {}
+    return {
+        "skin_diagnosis": diagnosis,
+        "retrieval_signals": retrieval_signals,
+        "timing_events": [_timing_event("skin_diagnosis", started_at)],
+    }
+
+
+async def _invoke_recommendation(state: AnalysisState) -> dict[str, Any]:
+    started_at = perf_counter()
     candidates = state.get("rag_candidates", [])
-    draft = await analyze_skin(
+    draft = await recommend_products(
         questionnaire=state["questionnaire"],
         weather=state.get("weather"),
         current_products=state.get("current_products"),
-        image_bytes=image_payloads[0][0] if image_payloads else None,
-        image_media_type=image_payloads[0][1] if image_payloads else None,
-        image_payloads=image_payloads,
-        image_labels=state.get("image_labels"),
+        diagnosis=state.get("skin_diagnosis") or {},
         rag_products=[candidate.to_prompt_dict() for candidate in candidates],
         validation_feedback=state.get("validation_errors") or None,
     )
     return {
-        "analysis_draft": draft,
+        "recommendation_draft": draft,
         "model_attempts": state.get("model_attempts", 0) + 1,
         "timing_events": [
             _timing_event(
-                "model_analysis",
+                "recommendation",
                 started_at,
                 attempt=state.get("model_attempts", 0) + 1,
             )
@@ -142,16 +162,26 @@ async def _invoke_multimodal_model(state: AnalysisState) -> dict[str, Any]:
     }
 
 
-model_runnable = RunnableLambda(_invoke_multimodal_model).with_config(
-    {"run_name": "multimodal_skin_analysis"}
+diagnosis_runnable = RunnableLambda(_invoke_diagnosis).with_config(
+    {"run_name": "multimodal_skin_diagnosis"}
+)
+recommendation_runnable = RunnableLambda(_invoke_recommendation).with_config(
+    {"run_name": "product_recommendation"}
 )
 
 
-async def analyze_node(
+async def diagnosis_node(
     state: AnalysisState,
     config: RunnableConfig,
 ) -> dict[str, Any]:
-    return await model_runnable.ainvoke(state, config=config)
+    return await diagnosis_runnable.ainvoke(state, config=config)
+
+
+async def recommendation_node(
+    state: AnalysisState,
+    config: RunnableConfig,
+) -> dict[str, Any]:
+    return await recommendation_runnable.ainvoke(state, config=config)
 
 
 def validate_analysis(
@@ -196,8 +226,12 @@ def validate_analysis(
 
 async def validate_node(state: AnalysisState) -> dict[str, Any]:
     started_at = perf_counter()
+    merged_draft = {
+        **(state.get("skin_diagnosis") or {}),
+        **(state.get("recommendation_draft") or {}),
+    }
     final_analysis, errors = validate_analysis(
-        state.get("analysis_draft"),
+        merged_draft,
         state.get("rag_candidates", []),
         grounding_required=state.get("rag_grounding_enabled", False),
     )
@@ -247,23 +281,29 @@ def route_after_validation(state: AnalysisState) -> Literal["retry", "finish"]:
 def build_analysis_graph():
     builder = StateGraph(AnalysisState)
     builder.add_node("weather_context", fetch_weather_node)
+    builder.add_node(
+        "skin_diagnosis",
+        diagnosis_node,
+        retry_policy=RetryPolicy(max_attempts=2),
+    )
     builder.add_node("product_retrieval", retrieve_products_node)
     builder.add_node(
-        "model_analysis",
-        analyze_node,
+        "recommendation",
+        recommendation_node,
         retry_policy=RetryPolicy(max_attempts=2),
     )
     builder.add_node("result_validation", validate_node)
 
     builder.add_edge(START, "weather_context")
-    builder.add_edge("weather_context", "product_retrieval")
-    builder.add_edge("product_retrieval", "model_analysis")
-    builder.add_edge("model_analysis", "result_validation")
+    builder.add_edge("weather_context", "skin_diagnosis")
+    builder.add_edge("skin_diagnosis", "product_retrieval")
+    builder.add_edge("product_retrieval", "recommendation")
+    builder.add_edge("recommendation", "result_validation")
     builder.add_conditional_edges(
         "result_validation",
         route_after_validation,
         {
-            "retry": "model_analysis",
+            "retry": "recommendation",
             "finish": END,
         },
     )

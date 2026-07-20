@@ -54,6 +54,33 @@ def make_analysis(
     }
 
 
+def make_diagnosis() -> dict:
+    return {
+        "skin_analysis": {},
+        "weather_adjustment": {},
+        "concern_solutions": [],
+        "lifestyle_tips": [],
+        "retrieval_signals": {"skin_type": "dry"},
+    }
+
+
+def make_recommendation(
+    catalog_id: str,
+    brand: str = "Example",
+    product_name: str = "Barrier Cream",
+) -> dict:
+    return {
+        "product_recommendations": [
+            {
+                "catalog_id": catalog_id,
+                "brand": brand,
+                "product_name": product_name,
+            }
+        ],
+        "ingredient_conflicts": {},
+    }
+
+
 class AnalysisWorkflowTests(unittest.IsolatedAsyncioTestCase):
     def test_validation_routes_invalid_catalog_product_to_retry(self):
         _, errors = validate_analysis(
@@ -85,7 +112,7 @@ class AnalysisWorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(errors, [])
         self.assertEqual(grounded["product_recommendations"], [])
 
-    async def test_workflow_retries_only_model_after_validation_failure(self):
+    async def test_workflow_retries_only_recommendation_after_validation_failure(self):
         weather = {
             "city": "London",
             "country": "GB",
@@ -102,18 +129,22 @@ class AnalysisWorkflowTests(unittest.IsolatedAsyncioTestCase):
                 new=AsyncMock(return_value=weather),
             ) as weather_mock,
             patch(
+                "workflows.skin_analysis.diagnose_skin",
+                new=AsyncMock(return_value=make_diagnosis()),
+            ) as diagnosis_mock,
+            patch(
                 "workflows.skin_analysis.retrieve_product_candidates",
                 new=AsyncMock(return_value=[candidate]),
             ) as retrieval_mock,
             patch(
-                "workflows.skin_analysis.analyze_skin",
+                "workflows.skin_analysis.recommend_products",
                 new=AsyncMock(
                     side_effect=[
-                        make_analysis("invented:1", "Invented", "Magic Serum"),
-                        make_analysis("catalog:1"),
+                        make_recommendation("invented:1", "Invented", "Magic Serum"),
+                        make_recommendation("catalog:1"),
                     ]
                 ),
-            ) as model_mock,
+            ) as recommend_mock,
             patch(
                 "workflows.skin_analysis.rag_is_configured",
                 return_value=True,
@@ -130,14 +161,21 @@ class AnalysisWorkflowTests(unittest.IsolatedAsyncioTestCase):
             )
 
         weather_mock.assert_awaited_once()
+        diagnosis_mock.assert_awaited_once()
         retrieval_mock.assert_awaited_once()
-        self.assertEqual(model_mock.await_count, 2)
+        self.assertEqual(recommend_mock.await_count, 2)
         self.assertEqual(result["model_attempts"], 2)
         self.assertEqual(result["validation_errors"], [])
+        # Diagnosis-derived signals reach retrieval.
+        _, retrieval_kwargs = retrieval_mock.call_args
+        self.assertEqual(
+            retrieval_kwargs["retrieval_signals"], {"skin_type": "dry"}
+        )
         timing_nodes = [event["node"] for event in result["timing_events"]]
         self.assertEqual(timing_nodes.count("weather_context"), 1)
+        self.assertEqual(timing_nodes.count("skin_diagnosis"), 1)
         self.assertEqual(timing_nodes.count("product_retrieval"), 1)
-        self.assertEqual(timing_nodes.count("model_analysis"), 2)
+        self.assertEqual(timing_nodes.count("recommendation"), 2)
         self.assertEqual(timing_nodes.count("result_validation"), 2)
         self.assertEqual(
             result["final_analysis"]["product_recommendations"][0]["catalog_id"],

@@ -138,7 +138,18 @@ def wants_fragrance_free(value: Any) -> bool:
     return any(term in text for term in ("fragrance-free", "fragrance free", "unscented", "无香"))
 
 
-def build_retrieval_query(questionnaire: dict, weather: Optional[dict]) -> str:
+def normalize_skin_type(value: Any) -> Optional[str]:
+    if not value or not isinstance(value, str):
+        return None
+    cleaned = value.strip().lower()
+    return cleaned or None
+
+
+def build_retrieval_query(
+    questionnaire: dict,
+    weather: Optional[dict],
+    retrieval_signals: Optional[dict] = None,
+) -> str:
     concerns = questionnaire.get("skin_concerns") or []
     if isinstance(concerns, str):
         concerns = [concerns]
@@ -157,6 +168,24 @@ def build_retrieval_query(questionnaire: dict, weather: Optional[dict]) -> str:
             f"{weather.get('humidity', 'unknown')}% humidity, "
             f"{weather.get('description', 'unknown')}"
         )
+
+    # Facial-scan-derived signals: enrich the query so retrieval reflects the
+    # observed skin state, not only self-reported questionnaire input.
+    signals = retrieval_signals or {}
+    skin_type = normalize_skin_type(signals.get("skin_type"))
+    if skin_type:
+        parts.append(f"observed skin type: {skin_type}")
+    visible_concerns = signals.get("primary_concerns") or []
+    if isinstance(visible_concerns, str):
+        visible_concerns = [visible_concerns]
+    if visible_concerns:
+        parts.append(
+            "observed concerns: "
+            + ", ".join(str(item) for item in visible_concerns)
+        )
+    visible_description = signals.get("visible_description")
+    if visible_description:
+        parts.append(f"visible skin signals from facial scan: {visible_description}")
     return "\n".join(parts)
 
 
@@ -206,17 +235,19 @@ async def retrieve_product_candidates(
     questionnaire: dict,
     weather: Optional[dict],
     markets: Optional[list[str]] = None,
+    retrieval_signals: Optional[dict] = None,
 ) -> list[ProductCandidate]:
     if not rag_is_configured():
         return []
 
     settings = get_rag_settings()
-    query = build_retrieval_query(questionnaire, weather)
+    query = build_retrieval_query(questionnaire, weather, retrieval_signals)
     query_embedding = (await embed_texts([query]))[0]
     avoided = parse_avoided_ingredients(questionnaire.get("avoid_ingredients"))
     budget_max = parse_budget_max_usd(questionnaire.get("budget"))
     fragrance_free = wants_fragrance_free(questionnaire.get("fragrance_preference"))
     target_markets = [market.upper() for market in (markets or ["US", "GB"])]
+    skin_type = normalize_skin_type((retrieval_signals or {}).get("skin_type"))
 
     pool = await get_pool()
     rows = await pool.fetch(
@@ -236,7 +267,9 @@ async def retrieve_product_candidates(
               FROM unnest($5::text[]) AS avoided(term)
               WHERE ingredients_text ILIKE '%' || avoided.term || '%'
           )
-        ORDER BY embedding <=> $1
+        ORDER BY
+            (embedding <=> $1)
+            - (CASE WHEN $7::text IS NOT NULL AND skin_types ? $7::text THEN 0.05 ELSE 0 END)
         LIMIT $6
         """,
         query_embedding,
@@ -245,6 +278,7 @@ async def retrieve_product_candidates(
         Decimal(str(budget_max)) if budget_max is not None else None,
         avoided,
         settings.rag_candidate_limit,
+        skin_type,
     )
     return [_row_to_candidate(row) for row in rows]
 

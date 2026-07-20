@@ -3,12 +3,13 @@ import unittest
 from services.product_rag import (
     ProductCandidate,
     build_embedding_text,
+    build_retrieval_query,
     ground_recommendations,
     parse_avoided_ingredients,
     parse_budget_max_usd,
     wants_fragrance_free,
 )
-from services.llm_service import _build_analysis_prompt
+from services.llm_service import _build_recommendation_prompt
 
 
 class ProductRagTests(unittest.TestCase):
@@ -42,6 +43,28 @@ class ProductRagTests(unittest.TestCase):
         self.assertIn("Barrier Cream", text)
         self.assertIn("ceramide", text)
         self.assertIn("dryness", text)
+
+    def test_retrieval_query_includes_face_signals(self):
+        query = build_retrieval_query(
+            questionnaire={"skin_concerns": ["dryness"]},
+            weather=None,
+            retrieval_signals={
+                "skin_type": "Combination",
+                "primary_concerns": ["enlarged pores", "redness"],
+                "visible_description": "oily T-zone with visible pores on the nose",
+            },
+        )
+        self.assertIn("observed skin type: combination", query)
+        self.assertIn("enlarged pores", query)
+        self.assertIn("visible skin signals from facial scan:", query)
+
+    def test_retrieval_query_without_signals_is_unchanged(self):
+        query = build_retrieval_query(
+            questionnaire={"skin_concerns": ["dryness"]},
+            weather=None,
+        )
+        self.assertNotIn("visible skin signals", query)
+        self.assertNotIn("observed skin type", query)
 
     def test_grounding_drops_hallucinated_products(self):
         candidate = ProductCandidate(
@@ -85,11 +108,11 @@ class ProductRagTests(unittest.TestCase):
         self.assertEqual(recommendation["product_url"], "https://example.com/product")
 
     def test_prompt_requires_catalog_grounding(self):
-        prompt = _build_analysis_prompt(
+        prompt = _build_recommendation_prompt(
             questionnaire={"skin_concerns": ["dryness"]},
             weather=None,
             current_products=None,
-            image_count=0,
+            diagnosis={"skin_analysis": {"skin_type": "dry"}},
             rag_products=[
                 {
                     "catalog_id": "catalog:1",
